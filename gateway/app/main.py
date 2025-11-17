@@ -6,8 +6,8 @@ from .api.routes_dashboard import router as dashboard_router
 
 app = FastAPI()
 
-app.mount("/static", StaticFiles(directory="app/static"), name="static")
-templates = Jinja2Templates(directory="app/templates")
+app.mount("/static", StaticFiles(directory="gateway/app/static"), name="static")
+templates = Jinja2Templates(directory="gateway/app/templates")
 
 app.include_router(public_router)
 app.include_router(dashboard_router)
