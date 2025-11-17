@@ -6,4 +6,5 @@ python-dotenv
 jinja2
 python-multipart
 pytest
+pytest-asyncio
 httpx
