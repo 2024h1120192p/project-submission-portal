@@ -1,5 +1,134 @@
 {% extends "base.html" %}
 {% block content %}
-<h2>Faculty Dashboard</h2>
-<p>Static placeholder</p>
+<div style="max-width: 1400px; margin: 0 auto; padding: 20px;">
+    <!-- Header -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; padding-bottom: 15px; border-bottom: 2px solid #6f42c1;">
+        <div>
+            <h1 style="margin: 0;">Faculty Dashboard</h1>
+            {% if user %}
+            <p style="margin: 5px 0 0 0; color: #666;">Welcome, {{ user.name }} ({{ user.email }})</p>
+            {% endif %}
+        </div>
+        <a href="/" style="padding: 8px 20px; background: #dc3545; color: white; text-decoration: none; border-radius: 4px;">Logout</a>
+    </div>
+    
+    <!-- Stats Overview -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px;">
+        <div style="padding: 20px; background: #6f42c1; color: white; border-radius: 8px;">
+            <h3 style="margin: 0 0 10px 0;">Total Submissions</h3>
+            <p style="font-size: 2em; margin: 0; font-weight: bold;">{{ total_submissions }}</p>
+        </div>
+        
+        <div style="padding: 20px; background: #dc3545; color: white; border-radius: 8px;">
+            <h3 style="margin: 0 0 10px 0;">Flagged</h3>
+            <p style="font-size: 2em; margin: 0; font-weight: bold;">{{ flagged_count }}</p>
+        </div>
+        
+        {% if latest_analytics %}
+        <div style="padding: 20px; background: #ffc107; color: white; border-radius: 8px;">
+            <h3 style="margin: 0 0 10px 0;">Avg Plagiarism</h3>
+            <p style="font-size: 2em; margin: 0; font-weight: bold;">{{ "%.1f"|format(latest_analytics.avg_plagiarism * 100) }}%</p>
+        </div>
+        
+        <div style="padding: 20px; background: {{ '#dc3545' if spike_detected else '#28a745' }}; color: white; border-radius: 8px;">
+            <h3 style="margin: 0 0 10px 0;">Spike Alert</h3>
+            <p style="font-size: 2em; margin: 0; font-weight: bold;">{{ 'YES' if spike_detected else 'NO' }}</p>
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- Main Content Grid -->
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-bottom: 30px;">
+        <!-- Recent Submissions -->
+        <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+            <h2 style="margin: 0 0 20px 0;">Recent Submissions</h2>
+            
+            {% if recent_submissions %}
+            <div style="max-height: 400px; overflow-y: auto;">
+                {% for sub in recent_submissions %}
+                <div style="padding: 15px; margin-bottom: 10px; background: #f8f9fa; border-left: 3px solid #6f42c1; border-radius: 4px;">
+                    <p style="margin: 0; font-weight: bold;">{{ sub.id[:16] }}...</p>
+                    <p style="margin: 5px 0; color: #666; font-size: 0.9em;">Student: {{ sub.user_id }}</p>
+                    <p style="margin: 5px 0; color: #666; font-size: 0.9em;">Assignment: {{ sub.assignment_id }}</p>
+                    <p style="margin: 5px 0 0 0; color: #666; font-size: 0.9em;">
+                        <strong>{{ sub.uploaded_at.strftime('%Y-%m-%d %H:%M') }}</strong>
+                    </p>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p style="color: #666; text-align: center; padding: 40px;">No recent submissions</p>
+            {% endif %}
+        </div>
+        
+        <!-- Analytics Trend -->
+        <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+            <h2 style="margin: 0 0 20px 0;">Analytics History</h2>
+            
+            {% if analytics_history %}
+            <div style="max-height: 400px; overflow-y: auto;">
+                {% for window in analytics_history %}
+                <div style="padding: 15px; margin-bottom: 10px; background: #f8f9fa; border-radius: 4px;">
+                    <p style="margin: 0; font-weight: bold;">{{ window.timestamp.strftime('%Y-%m-%d %H:%M') }}</p>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px;">
+                        <div>
+                            <p style="margin: 0; font-size: 0.85em; color: #666;">Submission Rate</p>
+                            <p style="margin: 2px 0 0 0; font-weight: bold;">{{ "%.2f"|format(window.submission_rate) }}/hr</p>
+                        </div>
+                        <div>
+                            <p style="margin: 0; font-size: 0.85em; color: #666;">Avg Plagiarism</p>
+                            <p style="margin: 2px 0 0 0; font-weight: bold;">{{ "%.1f"|format(window.avg_plagiarism * 100) }}%</p>
+                        </div>
+                        <div>
+                            <p style="margin: 0; font-size: 0.85em; color: #666;">Avg AI Prob</p>
+                            <p style="margin: 2px 0 0 0; font-weight: bold;">{{ "%.1f"|format(window.avg_ai_probability * 100) }}%</p>
+                        </div>
+                        <div>
+                            <p style="margin: 0; font-size: 0.85em; color: #666;">Spike</p>
+                            <p style="margin: 2px 0 0 0; font-weight: bold; color: {{ '#dc3545' if window.spike_detected else '#28a745' }};">
+                                {{ 'Yes' if window.spike_detected else 'No' }}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p style="color: #666; text-align: center; padding: 40px;">No analytics data available</p>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Detailed Submissions Table -->
+    {% if recent_submissions %}
+    <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+        <h2 style="margin: 0 0 20px 0;">All Recent Submissions (Detailed)</h2>
+        
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                    <tr style="background: #f8f9fa; border-bottom: 2px solid #dee2e6;">
+                        <th style="padding: 12px; text-align: left;">Submission ID</th>
+                        <th style="padding: 12px; text-align: left;">Student ID</th>
+                        <th style="padding: 12px; text-align: left;">Assignment</th>
+                        <th style="padding: 12px; text-align: left;">Upload Time</th>
+                        <th style="padding: 12px; text-align: left;">File</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for sub in recent_submissions %}
+                    <tr style="border-bottom: 1px solid #dee2e6;">
+                        <td style="padding: 12px; font-family: monospace; font-size: 0.9em;">{{ sub.id[:20] }}...</td>
+                        <td style="padding: 12px;">{{ sub.user_id }}</td>
+                        <td style="padding: 12px;">{{ sub.assignment_id }}</td>
+                        <td style="padding: 12px;">{{ sub.uploaded_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                        <td style="padding: 12px;"><a href="{{ sub.file_url }}" style="color: #6f42c1;">View</a></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+</div>
 {% endblock %}
