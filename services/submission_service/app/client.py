@@ -65,6 +65,41 @@ class SubmissionServiceClient:
             pass
         return None
 
+    async def upload_file(
+        self,
+        user_id: str,
+        assignment_id: str,
+        file_content: bytes,
+        filename: str
+    ) -> Optional[Submission]:
+        """Upload a file and create submission.
+        
+        Args:
+            user_id: The user uploading the file
+            assignment_id: The assignment/paper ID
+            file_content: The file content as bytes
+            filename: Original filename
+            
+        Returns:
+            Created Submission object if successful, None otherwise
+        """
+        try:
+            files = {"file": (filename, file_content)}
+            data = {
+                "user_id": user_id,
+                "assignment_id": assignment_id
+            }
+            resp = await self._client.post(
+                "/submissions/upload",
+                files=files,
+                data=data
+            )
+            if resp.status_code in (200, 201):
+                return Submission(**resp.json())
+        except Exception:
+            pass
+        return None
+
     async def close(self):
         """Close the HTTP client."""
         await self._client.aclose()
