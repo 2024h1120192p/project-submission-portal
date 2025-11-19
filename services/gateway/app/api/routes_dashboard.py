@@ -13,9 +13,9 @@ from ..core.auth import get_user_from_token
 router = APIRouter(prefix="/dashboard")
 
 
-@router.get("/student", response_class=HTMLResponse)
+@router.get("/researcher", response_class=HTMLResponse)
 async def dashboard_student(request: Request, access_token: Optional[str] = Cookie(None)):
-    """Student dashboard - orchestrate data fetching through client."""
+    """Researcher dashboard - orchestrate data fetching through client."""
     templates = request.state.templates
     clients = request.state.clients
     
@@ -32,9 +32,9 @@ async def dashboard_student(request: Request, access_token: Optional[str] = Cook
     )
 
 
-@router.get("/faculty", response_class=HTMLResponse)
+@router.get("/reviewer", response_class=HTMLResponse)
 async def dashboard_faculty(request: Request, access_token: Optional[str] = Cookie(None)):
-    """Faculty dashboard - orchestrate data fetching through client."""
+    """Reviewer dashboard - orchestrate data fetching through client."""
     templates = request.state.templates
     clients = request.state.clients
     

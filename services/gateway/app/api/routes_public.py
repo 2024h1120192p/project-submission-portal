@@ -61,9 +61,9 @@ async def login(request: Request, email: str = Form(...), password: str = Form(.
     
     # Redirect to appropriate dashboard based on role
     if role == "faculty":
-        response = RedirectResponse(url="/dashboard/faculty", status_code=303)
+        response = RedirectResponse(url="/dashboard/reviewer", status_code=303)
     else:
-        response = RedirectResponse(url="/dashboard/student", status_code=303)
+        response = RedirectResponse(url="/dashboard/researcher", status_code=303)
     
     # Set JWT cookie
     response.set_cookie(

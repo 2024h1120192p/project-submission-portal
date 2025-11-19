@@ -38,7 +38,7 @@ class SubmissionServiceClient:
             List of Submission objects
         """
         try:
-            resp = await self._client.get(f"/submissions/user/{user_id}")
+            resp = await self._client.post(f"/submissions/user/{user_id}")
             if resp.status_code == 200:
                 return [Submission(**s) for s in resp.json()]
         except Exception:
