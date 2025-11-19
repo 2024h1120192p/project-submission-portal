@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+  namespace: project-submission-portal
+data:
+  # Add your application configuration here
+  LOG_LEVEL: "info"
+  ENVIRONMENT: "production"

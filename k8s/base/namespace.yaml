@@ -1,0 +1,6 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: project-submission-portal
+  labels:
+    name: project-submission-portal
