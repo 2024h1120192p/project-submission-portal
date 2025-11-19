@@ -2,6 +2,8 @@
 
 Provides windowed analytics data including submission rates,
 plagiarism averages, and AI probability metrics.
+
+Uses embedded Flink for windowed aggregations instead of separate Kafka consumer.
 """
 from fastapi import FastAPI, HTTPException
 from contextlib import asynccontextmanager
@@ -9,6 +11,7 @@ from libs.events.schemas import AnalyticsWindow
 from libs.events import KafkaConsumerClient
 from config.logging import get_logger
 from .store import get_latest, get_history, add_window
+from .stream_processor import create_stream_processor
 from config.settings import get_settings
 import asyncio
 from datetime import datetime, timezone
@@ -16,48 +19,67 @@ from datetime import datetime, timezone
 logger = get_logger(__name__)
 settings = get_settings()
 
-# Initialize Kafka client
+# Initialize Kafka client for consuming aggregated windows
 kafka_broker = getattr(settings, 'KAFKA_BROKER', 'kafka:29092')
 kafka_client = KafkaConsumerClient(
     broker=kafka_broker,
     group_id="analytics-service",
-    topics=["paper_uploaded", "plagiarism_checked"]
+    topics=["analytics_window"]  # Consume Flink-aggregated analytics topic
 )
+
+# Initialize Flink stream processor for windowed aggregations
+stream_processor = create_stream_processor(kafka_broker=kafka_broker, window_minutes=5)
 
 # Analytics state
 analytics_state = {
-    'submission_count': 0,
-    'plagiarism_scores': [],
+    'latest_window': None,
+    'windows_history': [],
     'consumer_task': None,
 }
 
 
-async def handle_plagiarism_event(event: dict):
-    """Handle plagiarism_checked events from Kafka."""
+async def handle_analytics_window(event: dict):
+    """Handle pre-aggregated analytics windows from embedded Flink processor.
+    
+    Flink (embedded in this service) performs windowed aggregations
+    and publishes to analytics_window topic, which we consume here.
+    """
     try:
-        score = event.get('internal_score', 0.0)
-        analytics_state['plagiarism_scores'].append(score)
-        # Keep only last 100 scores for efficiency
-        if len(analytics_state['plagiarism_scores']) > 100:
-            analytics_state['plagiarism_scores'].pop(0)
-        logger.info(f"Plagiarism event processed, current avg: {sum(analytics_state['plagiarism_scores']) / len(analytics_state['plagiarism_scores']):.2f}")
+        # Store the latest window data from Flink
+        analytics_state['latest_window'] = event
+        
+        # Keep history (last 100 windows)
+        analytics_state['windows_history'].append(event)
+        if len(analytics_state['windows_history']) > 100:
+            analytics_state['windows_history'].pop(0)
+        
+        logger.info(
+            f"Analytics window received: "
+            f"submissions={event.get('submission_count', 0)}, "
+            f"avg_internal={event.get('avg_internal_score', 0):.2f}, "
+            f"high_risk={event.get('high_risk_count', 0)}"
+        )
+        
+        # Store in Redis for API queries
+        window_data = AnalyticsWindow(
+            window_start=event.get('window_start', datetime.now(timezone.utc).isoformat()),
+            window_end=datetime.now(timezone.utc).isoformat(),
+            submission_count=event.get('submission_count', 0),
+            avg_internal_score=event.get('avg_internal_score', 0.0),
+            avg_external_score=event.get('avg_external_score', 0.0),
+            avg_ai_probability=event.get('avg_ai_probability', 0.0),
+            high_risk_count=event.get('high_risk_count', 0),
+            total_checks=event.get('total_checks', 0)
+        )
+        await add_window(window_data)
+        
     except Exception as e:
-        logger.error(f"Error handling plagiarism event: {e}")
-
-
-async def handle_submission_event(event: dict):
-    """Handle paper_uploaded events from Kafka."""
-    try:
-        analytics_state['submission_count'] += 1
-        logger.info(f"Submission event processed, total count: {analytics_state['submission_count']}")
-    except Exception as e:
-        logger.error(f"Error handling submission event: {e}")
+        logger.error(f"Error handling analytics window: {e}")
 
 
 async def start_kafka_consumer():
-    """Start consuming events from Kafka."""
-    kafka_client.register_handler("paper_uploaded", handle_submission_event)
-    kafka_client.register_handler("plagiarism_checked", handle_plagiarism_event)
+    """Start consuming pre-aggregated analytics windows from Flink."""
+    kafka_client.register_handler("analytics_window", handle_analytics_window)
     
     await kafka_client.start()
     await kafka_client.consume()
@@ -65,21 +87,32 @@ async def start_kafka_consumer():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Manage application lifecycle."""
+    """Manage application lifecycle.\"\"\"
     # Startup
-    task = asyncio.create_task(start_kafka_consumer())
-    analytics_state['consumer_task'] = task
-    logger.info("Application started successfully")
+    try:
+        # Start Flink stream processor for windowed aggregations
+        await stream_processor.start()
+        
+        # Start Kafka consumer to receive aggregated windows
+        task = asyncio.create_task(start_kafka_consumer())
+        analytics_state['consumer_task'] = task
+        
+        logger.info("Application started successfully with embedded Flink stream processor")
+    except Exception as e:
+        logger.error(f\"Failed to start services: {e}\")
     
     yield
     
     # Shutdown
-    task.cancel()
     try:
+        if analytics_state['consumer_task']:
+            analytics_state['consumer_task'].cancel()
+        
+        await stream_processor.stop()
         await kafka_client.close()
-        logger.info("Application shutdown complete")
+        logger.info(\"Application shutdown complete\")
     except Exception as e:
-        logger.error(f"Error during shutdown: {e}")
+        logger.error(f\"Error during shutdown: {e}\")
 
 
 app = FastAPI(title="Analytics Service", lifespan=lifespan)

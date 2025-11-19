@@ -17,3 +17,4 @@ motor
 redis
 aiofiles
 aiokafka
+apache-flink

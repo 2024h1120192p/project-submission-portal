@@ -42,6 +42,11 @@ class PlagiarismResult(BaseModel):
     external_score: float
     ai_generated_probability: float
     flagged_sections: list[str]
+    
+    # Enriched fields (business logic)
+    severity: Literal["low", "medium", "high"] | None = None
+    requires_review: bool = False
+    ai_generated_likely: bool = False
 
 
 class AnalyticsWindow(BaseModel):
@@ -49,11 +54,14 @@ class AnalyticsWindow(BaseModel):
     
     model_config = ConfigDict(from_attributes=True)
     
-    timestamp: datetime
-    submission_rate: float
-    avg_plagiarism: float
-    avg_ai_probability: float
-    spike_detected: bool
+    window_start: str | datetime
+    window_end: str | datetime | None = None
+    submission_count: int = 0
+    avg_internal_score: float = 0.0
+    avg_external_score: float = 0.0
+    avg_ai_probability: float = 0.0
+    high_risk_count: int = 0
+    total_checks: int = 0
 
 
 class Notification(BaseModel):

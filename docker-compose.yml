@@ -86,6 +86,57 @@ services:
       timeout: 5s
       retries: 5
 
+  flink-jobmanager:
+    image: flink:1.18-scala_2.12
+    container_name: paper-submission-flink-jobmanager
+    ports:
+      - "8081:8081"
+    command: jobmanager
+    environment:
+      - FLINK_PROPERTIES=jobmanager.rpc.address: flink-jobmanager
+      - JOB_MANAGER_RPC_ADDRESS=flink-jobmanager
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    depends_on:
+      kafka:
+        condition: service_healthy
+
+  flink-taskmanager:
+    image: flink:1.18-scala_2.12
+    container_name: paper-submission-flink-taskmanager
+    depends_on:
+      flink-jobmanager:
+        condition: service_healthy
+    command: taskmanager
+    environment:
+      - FLINK_PROPERTIES=jobmanager.rpc.address: flink-jobmanager
+      - JOB_MANAGER_RPC_ADDRESS=flink-jobmanager
+      - TASK_MANAGER_NUMBER_OF_TASK_SLOTS=4
+    volumes:
+      - ./flink-jobs:/opt/flink/jobs
+
+  flink-python-jobs:
+    build:
+      context: .
+      dockerfile: flink-jobs/Dockerfile
+    container_name: paper-submission-flink-jobs
+    depends_on:
+      flink-jobmanager:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    environment:
+      - KAFKA_BROKER=kafka:29092
+      - FLINK_JOBMANAGER=flink-jobmanager:8081
+    volumes:
+      - ./flink-jobs:/opt/flink-jobs
+      - ./libs:/opt/libs
+      - ./config:/opt/config
+    command: python /opt/flink-jobs/submit_jobs.py
+
 volumes:
   postgres_data:
   mongo_data:

@@ -19,7 +19,7 @@ kafka_broker = getattr(settings, 'KAFKA_BROKER', 'kafka:29092')
 kafka_client = KafkaConsumerClient(
     broker=kafka_broker,
     group_id="notification-service",
-    topics=["paper_uploaded", "plagiarism_checked"]
+    topics=["paper_uploaded_processed", "plagiarism_checked_processed"]  # Use Flink-processed topics
 )
 
 # Notification state
@@ -29,19 +29,30 @@ notification_state = {
 
 
 async def handle_plagiarism_event(event: dict):
-    """Handle plagiarism_checked events and create notifications."""
+    """Handle plagiarism_checked events and create notifications.
+    
+    Now receives enriched events from Flink with severity and metadata.
+    """
     try:
         submission_id = event.get('submission_id')
-        user_id = event.get('user_id')  # assuming plagiarism result includes user_id
+        user_id = event.get('user_id')
         internal_score = event.get('internal_score', 0.0)
+        severity = event.get('severity', 'unknown')
+        requires_review = event.get('requires_review', False)
         
-        message = f"Plagiarism check completed for submission {submission_id}: {internal_score:.1%} match found"
+        # Create notification based on severity
+        if severity == 'high':
+            message = f"⚠️ HIGH RISK: Plagiarism check for submission {submission_id} detected {internal_score:.1%} similarity. Manual review required."
+        elif requires_review:
+            message = f"⚠️ REVIEW NEEDED: Plagiarism check for submission {submission_id} detected {internal_score:.1%} similarity."
+        else:
+            message = f"✓ Plagiarism check completed for submission {submission_id}: {internal_score:.1%} similarity ({severity} risk)"
         
         # Validate user exists
         user = await user_client.get_user(user_id)
         if user:
             await store.add(user_id, message)
-            logger.info(f"Notification created for user {user_id}")
+            logger.info(f"Notification created for user {user_id} (severity: {severity})")
         else:
             logger.warning(f"User {user_id} not found, skipping notification")
     except Exception as e:
@@ -49,12 +60,16 @@ async def handle_plagiarism_event(event: dict):
 
 
 async def handle_submission_event(event: dict):
-    """Handle paper_uploaded events and create notifications."""
+    """Handle paper_uploaded events and create notifications.
+    
+    Now receives enriched events from Flink with processing metadata.
+    """
     try:
         submission_id = event.get('id')
         user_id = event.get('user_id')
+        text_length = event.get('text_length', 0)
         
-        message = f"Your paper (submission {submission_id}) has been successfully uploaded and is queued for plagiarism checking"
+        message = f"✓ Your paper (submission {submission_id}, {text_length} characters) has been successfully uploaded and is queued for plagiarism checking"
         
         # Validate user exists
         user = await user_client.get_user(user_id)
@@ -68,9 +83,9 @@ async def handle_submission_event(event: dict):
 
 
 async def start_kafka_consumer():
-    """Start consuming events from Kafka."""
-    kafka_client.register_handler("paper_uploaded", handle_submission_event)
-    kafka_client.register_handler("plagiarism_checked", handle_plagiarism_event)
+    """Start consuming events from Kafka (Flink-processed topics)."""
+    kafka_client.register_handler("paper_uploaded_processed", handle_submission_event)
+    kafka_client.register_handler("plagiarism_checked_processed", handle_plagiarism_event)
     
     await kafka_client.start()
     await kafka_client.consume()

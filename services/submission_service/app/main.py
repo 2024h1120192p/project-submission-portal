@@ -4,6 +4,7 @@ from libs.events.schemas import Submission
 from libs.events import KafkaProducerClient
 from config.logging import get_logger
 from .store import SubmissionStore
+from .stream_processor import create_stream_processor
 from services.users_service.app.client import UserServiceClient
 from config.settings import get_settings
 from datetime import datetime, timezone
@@ -21,6 +22,9 @@ user_service_client = UserServiceClient(settings.USERS_SERVICE_URL)
 kafka_broker = getattr(settings, 'KAFKA_BROKER', 'kafka:29092')
 kafka_client = KafkaProducerClient(broker=kafka_broker)
 
+# Initialize Flink stream processor
+stream_processor = create_stream_processor(kafka_broker=kafka_broker)
+
 # Ensure upload directory exists
 UPLOAD_DIR = Path(settings.UPLOAD_DIR)
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
@@ -32,14 +36,17 @@ async def lifespan(app: FastAPI):
     # Startup
     try:
         await kafka_client.start()
-        logger.info("Application started successfully")
+        # Start Flink stream processor for consuming and enriching events
+        await stream_processor.start()
+        logger.info("Application started successfully with Flink stream processor")
     except Exception as e:
-        logger.error(f"Failed to start Kafka client: {e}")
+        logger.error(f"Failed to start services: {e}")
     
     yield
     
     # Shutdown
     try:
+        await stream_processor.stop()
         await kafka_client.close()
         logger.info("Application shutdown complete")
     except Exception as e:
