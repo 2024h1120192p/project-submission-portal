@@ -6,6 +6,7 @@ from fastapi import APIRouter, Request, Cookie
 from fastapi.responses import HTMLResponse, RedirectResponse
 from typing import Optional
 import jwt
+from libs.events.schemas import User
 
 
 router = APIRouter(prefix="/dashboard")
@@ -32,16 +33,23 @@ async def dashboard_student(request: Request, access_token: Optional[str] = Cook
     
     # Mock authentication - decode token
     user_id = "student_001"  # Default
+    role = "student"
     if access_token:
         payload = decode_token(access_token)
         if payload:
             user_id = payload.get("sub", user_id)
+            role = payload.get("role", role)
     
     # Fetch user data
     user = await clients.user.get_user(user_id)
     if not user:
-        # User not found, redirect to login
-        return RedirectResponse(url="/login", status_code=303)
+        # Fallback to mock user so dev flow works without Users service data
+        user = User(
+            id=user_id,
+            name="Demo Student",
+            email=f"{user_id}@example.com",
+            role=role,
+        )
     
     # Fetch student's submissions
     submissions = await clients.submission.list_by_user(user_id)
@@ -85,16 +93,23 @@ async def dashboard_faculty(request: Request, access_token: Optional[str] = Cook
     
     # Mock authentication - decode token
     user_id = "faculty_001"  # Default
+    role = "faculty"
     if access_token:
         payload = decode_token(access_token)
         if payload:
             user_id = payload.get("sub", user_id)
+            role = payload.get("role", role)
     
     # Fetch user data
     user = await clients.user.get_user(user_id)
     if not user:
-        # User not found, redirect to login
-        return RedirectResponse(url="/login", status_code=303)
+        # Fallback to mock user so dev flow works without Users service data
+        user = User(
+            id=user_id,
+            name="Demo Faculty",
+            email=f"{user_id}@example.com",
+            role=role,
+        )
     
     # Fetch analytics history
     analytics_history = await clients.analytics.get_history()
