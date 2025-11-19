@@ -1,5 +1,6 @@
 """Centralized configuration settings for all services."""
 from pydantic_settings import BaseSettings
+from pydantic import ConfigDict
 from functools import lru_cache
 
 
@@ -23,6 +24,7 @@ class Settings(BaseSettings):
     SECRET_KEY: str = "dev-secret-key-change-in-production"
     
     # Database Configuration
+    DATABASE_URL: str = "sqlite:///./app.db"  # Default SQLite URL
     POSTGRES_USER: str = "admin"
     POSTGRES_PASSWORD: str = "admin123"
     POSTGRES_HOST: str = "localhost"
@@ -60,9 +62,11 @@ class Settings(BaseSettings):
         """Get Redis connection URL."""
         return f"redis://{self.REDIS_HOST}:{self.REDIS_PORT}/{self.REDIS_DB}"
     
-    class Config:
-        env_file = ".env"
-        case_sensitive = True
+    model_config = ConfigDict(
+        env_file=".env",
+        case_sensitive=True,
+        extra="ignore"  # Ignore extra fields from environment
+    )
 
 
 @lru_cache()
