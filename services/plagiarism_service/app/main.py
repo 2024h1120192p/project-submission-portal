@@ -1,18 +1,45 @@
 from fastapi import FastAPI, HTTPException, status
+from contextlib import asynccontextmanager
 from libs.events.schemas import Submission, PlagiarismResult
-from libs.events.kafka import emit_event
+from libs.events import KafkaProducerClient
+from config.logging import get_logger
 from .engine import run_plagiarism_pipeline
 from .store import store
 from services.users_service.app.client import UserServiceClient
 from services.submission_service.app.client import SubmissionServiceClient
 from config.settings import get_settings
 
-app = FastAPI()
+logger = get_logger(__name__)
 settings = get_settings()
 
-# Initialize service clients
+# Initialize clients
 user_service_client = UserServiceClient(settings.USERS_SERVICE_URL)
 submission_service_client = SubmissionServiceClient(settings.SUBMISSION_SERVICE_URL)
+kafka_broker = getattr(settings, 'KAFKA_BROKER', 'kafka:29092')
+kafka_client = KafkaProducerClient(broker=kafka_broker)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Manage application lifecycle."""
+    # Startup
+    try:
+        await kafka_client.start()
+        logger.info("Application started successfully")
+    except Exception as e:
+        logger.error(f"Failed to start Kafka client: {e}")
+    
+    yield
+    
+    # Shutdown
+    try:
+        await kafka_client.close()
+        logger.info("Application shutdown complete")
+    except Exception as e:
+        logger.error(f"Error during shutdown: {e}")
+
+
+app = FastAPI(lifespan=lifespan)
 
 
 @app.post("/check", response_model=PlagiarismResult)
@@ -49,7 +76,10 @@ async def check(sub: Submission):
     await store.save(result)
     
     # Emit Kafka event
-    emit_event("plagiarism_checked", result.model_dump())
+    try:
+        await kafka_client.emit("plagiarism_checked", result.model_dump())
+    except Exception as e:
+        logger.error(f"Failed to emit event: {e}")
     
     return result
 

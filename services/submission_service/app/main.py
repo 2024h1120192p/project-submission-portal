@@ -1,6 +1,8 @@
 from fastapi import FastAPI, HTTPException, status, UploadFile, File, Form
+from contextlib import asynccontextmanager
 from libs.events.schemas import Submission
-from libs.events.kafka import emit_event
+from libs.events import KafkaProducerClient
+from config.logging import get_logger
 from .store import SubmissionStore
 from services.users_service.app.client import UserServiceClient
 from config.settings import get_settings
@@ -10,16 +12,41 @@ import uuid
 import aiofiles
 from typing import List
 
-app = FastAPI()
-store = SubmissionStore()
+logger = get_logger(__name__)
 settings = get_settings()
+store = SubmissionStore()
 
-# Initialize user service client
+# Initialize clients
 user_service_client = UserServiceClient(settings.USERS_SERVICE_URL)
+kafka_broker = getattr(settings, 'KAFKA_BROKER', 'kafka:29092')
+kafka_client = KafkaProducerClient(broker=kafka_broker)
 
 # Ensure upload directory exists
 UPLOAD_DIR = Path(settings.UPLOAD_DIR)
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Manage application lifecycle."""
+    # Startup
+    try:
+        await kafka_client.start()
+        logger.info("Application started successfully")
+    except Exception as e:
+        logger.error(f"Failed to start Kafka client: {e}")
+    
+    yield
+    
+    # Shutdown
+    try:
+        await kafka_client.close()
+        logger.info("Application shutdown complete")
+    except Exception as e:
+        logger.error(f"Error during shutdown: {e}")
+
+
+app = FastAPI(lifespan=lifespan)
 
 
 @app.post("/submissions", response_model=Submission, status_code=status.HTTP_201_CREATED)
@@ -46,7 +73,10 @@ async def create_submission(sub: Submission):
     await store.save(new_sub)
     
     # Emit Kafka event
-    emit_event("paper_uploaded", new_sub.model_dump(mode='json'))
+    try:
+        await kafka_client.emit("paper_uploaded", new_sub.model_dump(mode='json'))
+    except Exception as e:
+        logger.error(f"Failed to emit event: {e}")
     
     return new_sub
 
@@ -121,9 +151,14 @@ async def upload_file(
         text=text_content,
     )
     
+    
     await store.save(new_sub)
     
     # Emit Kafka event
-    emit_event("paper_uploaded", new_sub.model_dump(mode='json'))
+    try:
+        await kafka_client.emit("paper_uploaded", new_sub.model_dump(mode='json'))
+    except Exception as e:
+        logger.error(f"Failed to emit event: {e}")
     
     return new_sub
+

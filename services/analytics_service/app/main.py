@@ -4,14 +4,85 @@ Provides windowed analytics data including submission rates,
 plagiarism averages, and AI probability metrics.
 """
 from fastapi import FastAPI, HTTPException
+from contextlib import asynccontextmanager
 from libs.events.schemas import AnalyticsWindow
+from libs.events import KafkaConsumerClient
+from config.logging import get_logger
 from .store import get_latest, get_history, add_window
 from config.settings import get_settings
-import httpx
+import asyncio
 from datetime import datetime, timezone
 
-app = FastAPI(title="Analytics Service")
+logger = get_logger(__name__)
 settings = get_settings()
+
+# Initialize Kafka client
+kafka_broker = getattr(settings, 'KAFKA_BROKER', 'kafka:29092')
+kafka_client = KafkaConsumerClient(
+    broker=kafka_broker,
+    group_id="analytics-service",
+    topics=["paper_uploaded", "plagiarism_checked"]
+)
+
+# Analytics state
+analytics_state = {
+    'submission_count': 0,
+    'plagiarism_scores': [],
+    'consumer_task': None,
+}
+
+
+async def handle_plagiarism_event(event: dict):
+    """Handle plagiarism_checked events from Kafka."""
+    try:
+        score = event.get('internal_score', 0.0)
+        analytics_state['plagiarism_scores'].append(score)
+        # Keep only last 100 scores for efficiency
+        if len(analytics_state['plagiarism_scores']) > 100:
+            analytics_state['plagiarism_scores'].pop(0)
+        logger.info(f"Plagiarism event processed, current avg: {sum(analytics_state['plagiarism_scores']) / len(analytics_state['plagiarism_scores']):.2f}")
+    except Exception as e:
+        logger.error(f"Error handling plagiarism event: {e}")
+
+
+async def handle_submission_event(event: dict):
+    """Handle paper_uploaded events from Kafka."""
+    try:
+        analytics_state['submission_count'] += 1
+        logger.info(f"Submission event processed, total count: {analytics_state['submission_count']}")
+    except Exception as e:
+        logger.error(f"Error handling submission event: {e}")
+
+
+async def start_kafka_consumer():
+    """Start consuming events from Kafka."""
+    kafka_client.register_handler("paper_uploaded", handle_submission_event)
+    kafka_client.register_handler("plagiarism_checked", handle_plagiarism_event)
+    
+    await kafka_client.start()
+    await kafka_client.consume()
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Manage application lifecycle."""
+    # Startup
+    task = asyncio.create_task(start_kafka_consumer())
+    analytics_state['consumer_task'] = task
+    logger.info("Application started successfully")
+    
+    yield
+    
+    # Shutdown
+    task.cancel()
+    try:
+        await kafka_client.close()
+        logger.info("Application shutdown complete")
+    except Exception as e:
+        logger.error(f"Error during shutdown: {e}")
+
+
+app = FastAPI(title="Analytics Service", lifespan=lifespan)
 
 
 @app.get("/analytics/latest", response_model=AnalyticsWindow)
@@ -42,28 +113,30 @@ async def history():
 
 @app.post("/analytics/compute")
 async def compute_analytics():
-    """Compute current analytics window from submission and plagiarism services.
+    """Compute current analytics window from Kafka events.
     
-    This is a stub implementation that fetches data from other services
-    and computes windowed analytics.
+    Uses data collected from Kafka consumers to compute analytics.
     
     Returns:
         AnalyticsWindow: The newly computed analytics window
     """
-    # Fetch data from other services (stub implementation)
-    submission_count = await _get_submission_count()
-    plagiarism_avg = await _get_plagiarism_average()
+    # Use data collected from Kafka events
+    submission_count = analytics_state['submission_count']
+    plagiarism_scores = analytics_state['plagiarism_scores']
+    
+    plagiarism_avg = (sum(plagiarism_scores) / len(plagiarism_scores)) if plagiarism_scores else 0.0
     
     # Create analytics window
     window = AnalyticsWindow(
         timestamp=datetime.now(timezone.utc),
         submission_rate=submission_count / 60.0,  # per minute
         avg_plagiarism=plagiarism_avg,
-        avg_ai_probability=plagiarism_avg * 0.8,  # stub calculation
+        avg_ai_probability=plagiarism_avg * 0.8,  # based on plagiarism score
         spike_detected=submission_count > 10  # simple threshold
     )
     
     await add_window(window)
+    logger.info(f"Analytics computed: {submission_count} submissions, avg plagiarism: {plagiarism_avg:.2f}")
     return window
 
 

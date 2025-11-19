@@ -1,56 +1,107 @@
 from fastapi import FastAPI, HTTPException, status
 from pydantic import BaseModel
+from contextlib import asynccontextmanager
 from .store import store
 from libs.events.schemas import Notification
+from libs.events import KafkaConsumerClient
+from config.logging import get_logger
 from services.users_service.app.client import UserServiceClient
 from config.settings import get_settings
 from typing import List
 import asyncio
 
-app = FastAPI(title="Notification Service")
+logger = get_logger(__name__)
 settings = get_settings()
 
-# User service client for validation
+# Initialize clients
 user_client = UserServiceClient(settings.USERS_SERVICE_URL)
+kafka_broker = getattr(settings, 'KAFKA_BROKER', 'kafka:29092')
+kafka_client = KafkaConsumerClient(
+    broker=kafka_broker,
+    group_id="notification-service",
+    topics=["paper_uploaded", "plagiarism_checked"]
+)
 
-# Kafka consumer stub (for future implementation)
-class KafkaConsumerStub:
-    """Stub for future Kafka subscription implementation."""
-    
-    async def start(self):
-        """Start consuming messages from Kafka topics."""
-        # TODO: Implement Kafka consumer
-        # - Subscribe to relevant topics (e.g., plagiarism_checked)
-        # - Process events and create notifications
-        pass
-    
-    async def stop(self):
-        """Stop Kafka consumer gracefully."""
-        # TODO: Implement graceful shutdown
-        pass
+# Notification state
+notification_state = {
+    'consumer_task': None,
+}
 
-kafka_consumer = KafkaConsumerStub()
+
+async def handle_plagiarism_event(event: dict):
+    """Handle plagiarism_checked events and create notifications."""
+    try:
+        submission_id = event.get('submission_id')
+        user_id = event.get('user_id')  # assuming plagiarism result includes user_id
+        internal_score = event.get('internal_score', 0.0)
+        
+        message = f"Plagiarism check completed for submission {submission_id}: {internal_score:.1%} match found"
+        
+        # Validate user exists
+        user = await user_client.get_user(user_id)
+        if user:
+            await store.add(user_id, message)
+            logger.info(f"Notification created for user {user_id}")
+        else:
+            logger.warning(f"User {user_id} not found, skipping notification")
+    except Exception as e:
+        logger.error(f"Error handling plagiarism event: {e}")
+
+
+async def handle_submission_event(event: dict):
+    """Handle paper_uploaded events and create notifications."""
+    try:
+        submission_id = event.get('id')
+        user_id = event.get('user_id')
+        
+        message = f"Your paper (submission {submission_id}) has been successfully uploaded and is queued for plagiarism checking"
+        
+        # Validate user exists
+        user = await user_client.get_user(user_id)
+        if user:
+            await store.add(user_id, message)
+            logger.info(f"Notification created for user {user_id}")
+        else:
+            logger.warning(f"User {user_id} not found, skipping notification")
+    except Exception as e:
+        logger.error(f"Error handling submission event: {e}")
+
+
+async def start_kafka_consumer():
+    """Start consuming events from Kafka."""
+    kafka_client.register_handler("paper_uploaded", handle_submission_event)
+    kafka_client.register_handler("plagiarism_checked", handle_plagiarism_event)
+    
+    await kafka_client.start()
+    await kafka_client.consume()
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Manage application lifecycle."""
+    # Startup
+    task = asyncio.create_task(start_kafka_consumer())
+    notification_state['consumer_task'] = task
+    logger.info("Application started successfully")
+    
+    yield
+    
+    # Shutdown
+    task.cancel()
+    try:
+        await kafka_client.close()
+        await user_client.client.close()
+        logger.info("Application shutdown complete")
+    except Exception as e:
+        logger.error(f"Error during shutdown: {e}")
+
+
+app = FastAPI(title="Notification Service", lifespan=lifespan)
 
 
 class NotifyRequest(BaseModel):
     user_id: str
     message: str
-
-
-@app.on_event("startup")
-async def startup_event():
-    """Initialize service on startup."""
-    # Future: Start Kafka consumer
-    # await kafka_consumer.start()
-    pass
-
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    """Cleanup on shutdown."""
-    # Future: Stop Kafka consumer
-    # await kafka_consumer.stop()
-    await user_client.client.close()
 
 
 @app.post("/notify", response_model=Notification, status_code=status.HTTP_201_CREATED)

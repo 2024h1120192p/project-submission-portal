@@ -1,117 +1,185 @@
-"""Event emission utilities for Kafka messaging.
+"""Kafka client interfaces for producers and consumers.
 
-Provides a KafkaEmitter stub that can be replaced with actual Kafka implementation.
-All functions are async-compatible and can be used in async contexts.
+Provides clean, reusable client classes following the same pattern
+as other service clients in the application.
 """
-from typing import Any, Dict
+from typing import Dict, Any, List, Callable, Optional
 import json
+from aiokafka import AIOKafkaProducer, AIOKafkaConsumer
+from config.logging import get_logger
+
+logger = get_logger(__name__)
 
 
-class KafkaEmitter:
-    """Stub Kafka emitter for event-driven architecture.
+class KafkaProducerClient:
+    """Kafka producer client with clean interface for event emission.
     
-    This is a stub implementation that prints events to console.
-    In production, replace with actual Kafka producer using confluent-kafka or aiokafka.
-    
-    The stub is designed to be async-compatible so it can be seamlessly replaced
-    with an async Kafka client when needed.
+    Usage:
+        producer = KafkaProducerClient(broker="kafka:29092")
+        await producer.start()
+        await producer.emit("topic", {"key": "value"})
+        await producer.close()
     """
     
-    def __init__(self, broker: str = "localhost:9092"):
-        """Initialize the Kafka emitter.
+    def __init__(self, broker: str = "kafka:29092"):
+        """Initialize Kafka producer client.
         
         Args:
-            broker: Kafka broker address (default: localhost:9092)
+            broker: Kafka broker address
         """
         self.broker = broker
-        # TODO: Initialize actual Kafka producer
-        # For async implementation:
-        # from aiokafka import AIOKafkaProducer
-        # self.producer = AIOKafkaProducer(bootstrap_servers=broker)
-        # await self.producer.start()
-        
-        # For sync implementation:
-        # from confluent_kafka import Producer
-        # self.producer = Producer({'bootstrap.servers': broker})
+        self.producer: Optional[AIOKafkaProducer] = None
+        self._started = False
     
-    def emit(self, topic: str, event: Dict[str, Any]) -> None:
-        """Emit an event to a Kafka topic (synchronous stub).
+    async def start(self) -> None:
+        """Start the Kafka producer connection."""
+        if self._started:
+            return
+        
+        try:
+            self.producer = AIOKafkaProducer(
+                bootstrap_servers=self.broker,
+                value_serializer=lambda v: json.dumps(v, default=str).encode('utf-8')
+            )
+            await self.producer.start()
+            self._started = True
+            logger.info(f"Kafka producer connected to {self.broker}")
+        except Exception as e:
+            logger.error(f"Failed to start Kafka producer: {e}")
+            raise
+    
+    async def emit(self, topic: str, event: Dict[str, Any]) -> None:
+        """Emit an event to a Kafka topic.
         
         Args:
             topic: Kafka topic name
             event: Event data as dictionary
+            
+        Raises:
+            RuntimeError: If producer not started
         """
-        # Stub implementation - prints to console
-        print(f"[KAFKA_EMIT] Topic: {topic}")
-        print(f"[KAFKA_EMIT] Event: {json.dumps(event, default=str)}")
+        if not self._started or self.producer is None:
+            raise RuntimeError("Producer not started. Call await client.start() first.")
         
-        # TODO: Replace with actual Kafka producer
-        # For sync:
-        # self.producer.produce(topic, json.dumps(event, default=str).encode('utf-8'))
-        # self.producer.flush()
+        try:
+            await self.producer.send_and_wait(topic, value=event)
+            logger.info(f"Event emitted to topic '{topic}'")
+            logger.debug(f"Event data: {event}")
+        except Exception as e:
+            logger.error(f"Failed to emit event to topic '{topic}': {e}")
+            raise
     
-    async def emit_async(self, topic: str, event: Dict[str, Any]) -> None:
-        """Emit an event to a Kafka topic (async stub).
-        
-        This method is provided for async compatibility. Currently it's a stub
-        that calls the synchronous emit method.
-        
-        Args:
-            topic: Kafka topic name
-            event: Event data as dictionary
-        """
-        # Stub implementation - calls sync version
-        self.emit(topic, event)
-        
-        # TODO: Replace with actual async Kafka producer
-        # await self.producer.send_and_wait(topic, json.dumps(event, default=str).encode('utf-8'))
-    
-    def close(self) -> None:
+    async def close(self) -> None:
         """Close the Kafka producer connection."""
-        # TODO: Implement cleanup
-        # if hasattr(self, 'producer'):
-        #     self.producer.close()
-        pass
+        if self.producer is not None and self._started:
+            try:
+                await self.producer.stop()
+                self._started = False
+                logger.info("Kafka producer closed")
+            except Exception as e:
+                logger.error(f"Error closing Kafka producer: {e}")
+                raise
+
+
+class KafkaConsumerClient:
+    """Kafka consumer client with clean interface for event consumption.
     
-    async def close_async(self) -> None:
-        """Close the Kafka producer connection (async)."""
-        # TODO: Implement async cleanup
-        # if hasattr(self, 'producer'):
-        #     await self.producer.stop()
-        pass
-
-
-# Global emitter instance
-_emitter: KafkaEmitter | None = None
-
-
-def get_emitter() -> KafkaEmitter:
-    """Get or create global Kafka emitter instance.
-    
-    Returns:
-        Singleton KafkaEmitter instance
+    Usage:
+        consumer = KafkaConsumerClient(
+            broker="kafka:29092",
+            group_id="my-service",
+            topics=["topic1", "topic2"]
+        )
+        consumer.register_handler("topic1", my_handler_func)
+        await consumer.start()
+        await consumer.consume()  # Runs indefinitely
     """
-    global _emitter
-    if _emitter is None:
-        _emitter = KafkaEmitter()
-    return _emitter
-
-
-def emit_event(topic: str, event: Dict[str, Any]) -> None:
-    """Convenience function to emit an event synchronously.
     
-    Args:
-        topic: Kafka topic name
-        event: Event data as dictionary
-    """
-    get_emitter().emit(topic, event)
-
-
-async def emit_event_async(topic: str, event: Dict[str, Any]) -> None:
-    """Convenience function to emit an event asynchronously.
+    def __init__(
+        self,
+        broker: str = "kafka:29092",
+        group_id: str = "default-group",
+        topics: Optional[List[str]] = None
+    ):
+        """Initialize Kafka consumer client.
+        
+        Args:
+            broker: Kafka broker address
+            group_id: Consumer group ID for offset tracking
+            topics: List of topics to subscribe to
+        """
+        self.broker = broker
+        self.group_id = group_id
+        self.topics = topics or []
+        self.consumer: Optional[AIOKafkaConsumer] = None
+        self._started = False
+        self.handlers: Dict[str, Callable] = {}
     
-    Args:
-        topic: Kafka topic name
-        event: Event data as dictionary
-    """
-    await get_emitter().emit_async(topic, event)
+    def register_handler(self, topic: str, handler: Callable) -> None:
+        """Register an event handler for a topic.
+        
+        Args:
+            topic: Kafka topic name
+            handler: Async callable that accepts event dict as parameter
+        """
+        self.handlers[topic] = handler
+        logger.info(f"Handler registered for topic '{topic}'")
+    
+    async def start(self) -> None:
+        """Start the Kafka consumer connection."""
+        if self._started:
+            return
+        
+        try:
+            self.consumer = AIOKafkaConsumer(
+                *self.topics,
+                bootstrap_servers=self.broker,
+                group_id=self.group_id,
+                value_deserializer=lambda m: json.loads(m.decode('utf-8')),
+                auto_offset_reset='earliest',
+                enable_auto_commit=True,
+            )
+            await self.consumer.start()
+            self._started = True
+            logger.info(f"Kafka consumer started (group: {self.group_id}, topics: {self.topics})")
+        except Exception as e:
+            logger.error(f"Failed to start Kafka consumer: {e}")
+            raise
+    
+    async def consume(self) -> None:
+        """Start consuming messages and dispatch to registered handlers.
+        
+        This method runs indefinitely, listening for messages.
+        Call this in a background task.
+        """
+        if not self._started or self.consumer is None:
+            raise RuntimeError("Consumer not started. Call await client.start() first.")
+        
+        try:
+            async for message in self.consumer:
+                topic = message.topic
+                event = message.value
+                
+                logger.debug(f"Event received from topic '{topic}': {event}")
+                
+                if topic in self.handlers:
+                    try:
+                        await self.handlers[topic](event)
+                    except Exception as e:
+                        logger.error(f"Error in handler for topic '{topic}': {e}", exc_info=True)
+                else:
+                    logger.warning(f"No handler registered for topic '{topic}'")
+        except Exception as e:
+            logger.error(f"Error consuming from Kafka: {e}", exc_info=True)
+            raise
+    
+    async def close(self) -> None:
+        """Close the Kafka consumer connection."""
+        if self.consumer is not None and self._started:
+            try:
+                await self.consumer.stop()
+                self._started = False
+                logger.info("Kafka consumer closed")
+            except Exception as e:
+                logger.error(f"Error closing Kafka consumer: {e}")
+                raise

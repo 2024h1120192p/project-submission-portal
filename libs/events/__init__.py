@@ -2,7 +2,7 @@
 
 This package provides:
 - Pydantic models for event payloads (User, Submission, PlagiarismResult, etc.)
-- KafkaEmitter stub for event-driven architecture
+- KafkaProducerClient and KafkaConsumerClient for clean Kafka integration
 - Helper functions for encoding/decoding event payloads
 """
 from .schemas import (
@@ -14,7 +14,7 @@ from .schemas import (
     encode,
     decode,
 )
-from .kafka import emit_event, get_emitter, KafkaEmitter
+from .kafka import KafkaProducerClient, KafkaConsumerClient
 
 __all__ = [
     # Models
@@ -26,8 +26,7 @@ __all__ = [
     # Encoding/Decoding helpers
     "encode",
     "decode",
-    # Kafka utilities
-    "emit_event",
-    "get_emitter",
-    "KafkaEmitter",
+    # Kafka clients
+    "KafkaProducerClient",
+    "KafkaConsumerClient",
 ]
