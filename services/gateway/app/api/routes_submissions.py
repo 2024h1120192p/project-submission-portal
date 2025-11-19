@@ -1,6 +1,7 @@
 """API routes for research paper submission uploads and management."""
 from fastapi import APIRouter, Request, UploadFile, File, Form, HTTPException, status
 from fastapi.responses import JSONResponse
+from fastapi.templating import Jinja2Templates
 from pathlib import Path
 import uuid
 import aiofiles
@@ -9,6 +10,7 @@ from datetime import datetime, timezone
 from libs.events.schemas import Submission
 
 router = APIRouter(prefix="/api")
+templates = Jinja2Templates(directory="services/gateway/app/templates")
 
 
 @router.post("/submissions/upload")
@@ -105,24 +107,18 @@ async def upload_submission(
     if text_content:
         try:
             plagiarism_result = await clients.plagiarism.check(created_submission)
-            return JSONResponse(
-                status_code=status.HTTP_201_CREATED,
-                content={
-                    "message": "Research paper submitted successfully",
-                    "submission": created_submission.model_dump(mode='json'),
-                    "plagiarism_result": plagiarism_result.model_dump(mode='json')
-                }
-            )
         except Exception as e:
-            # Still return success even if plagiarism check fails
+            # Continue even if plagiarism check fails
             pass
     
-    return JSONResponse(
-        status_code=status.HTTP_201_CREATED,
-        content={
-            "message": "Research paper submitted successfully",
-            "submission": created_submission.model_dump(mode='json')
-        }
+    # Return HTML success page with auto-redirect using template
+    return templates.TemplateResponse(
+        "submission_success.html",
+        {
+            "request": request,
+            "paper_id": assignment_id
+        },
+        status_code=status.HTTP_201_CREATED
     )
 
 
