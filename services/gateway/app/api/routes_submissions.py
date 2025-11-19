@@ -2,12 +2,6 @@
 from fastapi import APIRouter, Request, UploadFile, File, Form, HTTPException, status
 from fastapi.responses import JSONResponse
 from fastapi.templating import Jinja2Templates
-from pathlib import Path
-import uuid
-import aiofiles
-import os
-from datetime import datetime, timezone
-from libs.events.schemas import Submission
 
 router = APIRouter(prefix="/api")
 templates = Jinja2Templates(directory="services/gateway/app/templates")
@@ -22,7 +16,7 @@ async def upload_submission(
     """Upload research paper submission.
     
     Researchers can upload their paper files here.
-    The file is saved locally and a submission record is created.
+    Delegates file handling to the submission service.
     """
     clients = request.state.clients
     
@@ -51,63 +45,35 @@ async def upload_submission(
             detail="No file provided"
         )
     
-    # Check file size (10MB limit)
-    max_size = 10 * 1024 * 1024  # 10MB
+    # Read file content
     content = await file.read()
-    if len(content) > max_size:
+    
+    # Check file size (10MB limit)
+    if len(content) > 10 * 1024 * 1024:
         raise HTTPException(
             status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
             detail="File size exceeds 10MB limit"
         )
     
-    # Create uploads directory if it doesn't exist
-    upload_dir = Path("./uploads")
-    upload_dir.mkdir(exist_ok=True)
-    
-    # Generate unique filename
-    file_ext = Path(file.filename).suffix
-    unique_filename = f"{uuid.uuid4()}{file_ext}"
-    file_path = upload_dir / unique_filename
-    
-    # Save file
-    async with aiofiles.open(file_path, 'wb') as f:
-        await f.write(content)
-    
-    # Read text content if it's a text file
-    text_content = None
-    if file_ext.lower() in ['.txt', '.py', '.java', '.cpp', '.c', '.js', '.html', '.css']:
-        try:
-            text_content = content.decode('utf-8')
-        except:
-            text_content = None
-    
-    # Create submission record
-    submission = Submission(
-        id=str(uuid.uuid4()),
+    # Upload file to submission service
+    created_submission = await clients.submission.upload_file(
         user_id=user_id,
         assignment_id=assignment_id,
-        uploaded_at=datetime.now(timezone.utc),
-        file_url=f"/uploads/{unique_filename}",
-        text=text_content
+        file_content=content,
+        filename=file.filename
     )
     
-    # Save to submission service
-    created_submission = await clients.submission.create(submission)
-    
     if not created_submission:
-        # Cleanup file if submission creation failed
-        if file_path.exists():
-            file_path.unlink()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to create submission record"
         )
     
     # Trigger plagiarism check if text content is available
-    if text_content:
+    if created_submission.text:
         try:
-            plagiarism_result = await clients.plagiarism.check(created_submission)
-        except Exception as e:
+            await clients.plagiarism.check(created_submission)
+        except Exception:
             # Continue even if plagiarism check fails
             pass
     
