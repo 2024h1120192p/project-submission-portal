@@ -1,9 +1,11 @@
-"""Event schemas and Kafka utilities.
+"""Event schemas and data models.
 
-This package provides:
-- Pydantic models for event payloads (User, Submission, PlagiarismResult, etc.)
-- KafkaProducerClient and KafkaConsumerClient for clean Kafka integration
-- Helper functions for encoding/decoding event payloads
+This package provides Pydantic models for event payloads used across services.
+
+For Kafka utilities, use:
+- from libs.kafka import KafkaProducerClient, KafkaConsumerClient, KafkaStreamProcessor
+
+For backward compatibility, Kafka clients are still accessible from here:
 """
 from .schemas import (
     User,
@@ -14,7 +16,8 @@ from .schemas import (
     encode,
     decode,
 )
-from .kafka import KafkaProducerClient, KafkaConsumerClient
+# Backward compatibility imports (deprecated - use libs.kafka instead)
+from libs.kafka.client import KafkaProducerClient, KafkaConsumerClient
 
 __all__ = [
     # Models
@@ -26,7 +29,7 @@ __all__ = [
     # Encoding/Decoding helpers
     "encode",
     "decode",
-    # Kafka clients
+    # Kafka clients (backward compatibility)
     "KafkaProducerClient",
     "KafkaConsumerClient",
 ]

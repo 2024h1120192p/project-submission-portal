@@ -1,25 +1,18 @@
 """Stream processor for analytics service.
 
-Uses Flink ONLY for time-based windowed aggregations (unavoidable - Flink's core strength).
-This is the one place where Flink is justified because:
+Uses Flink for time-based windowed aggregations (Flink's core strength).
+This is the appropriate use case for Flink because:
 1. Time-based windowing is complex to implement correctly
 2. Flink handles event time, watermarks, and late data arrival
 3. State management for windows is built-in
 
-For simple consumption/production, we use aiokafka everywhere else.
+For simple consumption/production, aiokafka is used in other services.
 """
 import json
 import os
 from datetime import datetime
-from pyflink.datastream import StreamExecutionEnvironment
-from pyflink.datastream.connectors.kafka import (
-    KafkaSource, KafkaOffsetsInitializer, KafkaSink, KafkaRecordSerializationSchema
-)
-from pyflink.common.serialization import SimpleStringSchema
-from pyflink.common.typeinfo import Types
 from pyflink.datastream.functions import AggregateFunction
-from pyflink.datastream.window import TumblingProcessingTimeWindows
-from pyflink.common import Time, WatermarkStrategy, Duration
+from libs.flink.flink import FlinkStreamProcessor
 from config.logging import get_logger
 
 logger = get_logger(__name__)
@@ -101,119 +94,51 @@ class AnalyticsAggregator(AggregateFunction):
         }
 
 
-class AnalyticsStreamProcessor:
+class AnalyticsStreamProcessor(FlinkStreamProcessor):
     """Flink-based windowed analytics processor.
     
-    JUSTIFICATION for using Flink here (not aiokafka):
-    - Time-based windowing is Flink's core feature
-    - Handling event time, watermarks, and late data is complex
-    - State management across windows requires specialized infrastructure
-    - Tumbling/sliding/session windows are built-in
-    - Alternative would be custom implementation with Redis/state store (more complex)
+    Extends FlinkStreamProcessor for time-based windowed aggregations
+    of submission and plagiarism check events.
     """
     
-    def __init__(self, kafka_broker: str = 'kafka:29092', window_minutes: int = 5):
-        """Initialize the stream processor.
+    def __init__(self, kafka_broker: str = 'localhost:9092', window_minutes: int = 5):
+        """Initialize the analytics stream processor.
         
         Args:
             kafka_broker: Kafka broker address
             window_minutes: Window size in minutes for tumbling windows
         """
-        self.kafka_broker = kafka_broker
-        self.window_minutes = window_minutes
-        self.env = None
-        
-    def create_pipeline(self) -> StreamExecutionEnvironment:
-        """Create and configure the Flink streaming pipeline with windowing.
+        super().__init__(
+            kafka_broker=kafka_broker,
+            window_minutes=window_minutes,
+            output_topic='analytics_window',
+            group_id='analytics-service-flink-processor',
+            job_name='Analytics Windowed Aggregation'
+        )
+    
+    def get_aggregator(self) -> AggregateFunction:
+        """Get the aggregator for analytics windowing.
         
         Returns:
-            Configured Flink execution environment
+            Configured AnalyticsAggregator instance
         """
-        # Create execution environment
-        self.env = StreamExecutionEnvironment.get_execution_environment()
-        self.env.set_parallelism(1)
-        
-        # Add Kafka connector JARs
-        kafka_jar = "flink-sql-connector-kafka-1.18.0.jar"
-        self.env.add_jars(f"file:///opt/flink/lib/{kafka_jar}")
-        
-        # Configure Kafka sources for both processed topics
-        submission_source = KafkaSource.builder() \
-            .set_bootstrap_servers(self.kafka_broker) \
-            .set_topics("paper_uploaded_processed") \
-            .set_group_id("analytics-service-flink-processor") \
-            .set_starting_offsets(KafkaOffsetsInitializer.earliest()) \
-            .set_value_only_deserializer(SimpleStringSchema()) \
-            .build()
-        
-        plagiarism_source = KafkaSource.builder() \
-            .set_bootstrap_servers(self.kafka_broker) \
-            .set_topics("plagiarism_checked_processed") \
-            .set_group_id("analytics-service-flink-processor") \
-            .set_starting_offsets(KafkaOffsetsInitializer.earliest()) \
-            .set_value_only_deserializer(SimpleStringSchema()) \
-            .build()
-        
-        # Configure Kafka sink for aggregated analytics
-        kafka_sink = KafkaSink.builder() \
-            .set_bootstrap_servers(self.kafka_broker) \
-            .set_record_serializer(
-                KafkaRecordSerializationSchema.builder()
-                .set_topic("analytics_window")
-                .set_value_serialization_schema(SimpleStringSchema())
-                .build()
-            ) \
-            .build()
-        
-        # Build processing pipeline with streams
-        submission_stream = self.env.from_source(
-            submission_source,
-            WatermarkStrategy.for_bounded_out_of_orderness(Duration.of_seconds(5)),
-            "Kafka Source - submissions"
-        )
-        
-        plagiarism_stream = self.env.from_source(
-            plagiarism_source,
-            WatermarkStrategy.for_bounded_out_of_orderness(Duration.of_seconds(5)),
-            "Kafka Source - plagiarism"
-        )
-        
-        # Union streams for combined analytics
-        union_stream = submission_stream.union(plagiarism_stream)
-        
-        # Apply windowed aggregation (tumbling windows)
-        # THIS is why we use Flink - time-based windowing is its killer feature
-        aggregated_stream = union_stream \
-            .key_by(lambda x: "global") \
-            .window(TumblingProcessingTimeWindows.of(Time.minutes(self.window_minutes))) \
-            .aggregate(AnalyticsAggregator(), output_type=Types.STRING())
-        
-        # Sink to analytics topic
-        aggregated_stream.sink_to(kafka_sink)
-        
-        logger.info(f"Analytics Flink pipeline created with {self.window_minutes}-min windows")
-        return self.env
+        return AnalyticsAggregator()
     
-    async def start(self):
-        """Start the stream processor asynchronously."""
-        try:
-            logger.info("Starting analytics Flink processor for windowed aggregations...")
-            env = self.create_pipeline()
-            # Run in background
-            env.execute_async("Analytics Windowed Aggregation")
-            logger.info("Analytics Flink processor started successfully")
-        except Exception as e:
-            logger.error(f"Failed to start analytics Flink processor: {e}")
-            raise
-    
-    async def stop(self):
-        """Stop the stream processor."""
-        try:
-            logger.info("Stopping analytics Flink processor...")
-            # Flink cleanup
-            logger.info("Analytics Flink processor stopped")
-        except Exception as e:
-            logger.error(f"Error stopping Flink processor: {e}")
+    def configure_sources(self) -> list:
+        """Configure Kafka sources for analytics streams.
+        
+        Consumes both submission and plagiarism processed events.
+        
+        Returns:
+            List of (topic_name, KafkaSource) tuples
+        """
+        submission_source = self._build_kafka_source('paper_uploaded_processed')
+        plagiarism_source = self._build_kafka_source('plagiarism_checked_processed')
+        
+        return [
+            ('paper_uploaded_processed', submission_source),
+            ('plagiarism_checked_processed', plagiarism_source)
+        ]
 
 
 def create_stream_processor(kafka_broker: str = None, window_minutes: int = 5) -> AnalyticsStreamProcessor:
@@ -227,6 +152,6 @@ def create_stream_processor(kafka_broker: str = None, window_minutes: int = 5) -
         Configured AnalyticsStreamProcessor instance
     """
     if kafka_broker is None:
-        kafka_broker = os.getenv('KAFKA_BROKER', 'kafka:29092')
+        kafka_broker = os.getenv('KAFKA_BROKER', 'localhost:9092')
     
     return AnalyticsStreamProcessor(kafka_broker=kafka_broker, window_minutes=window_minutes)

@@ -19,7 +19,7 @@ store = SubmissionStore()
 
 # Initialize clients
 user_service_client = UserServiceClient(settings.USERS_SERVICE_URL)
-kafka_broker = getattr(settings, 'KAFKA_BROKER', 'kafka:29092')
+kafka_broker = getattr(settings, 'KAFKA_BROKER', 'localhost:9092')
 kafka_client = KafkaProducerClient(broker=kafka_broker)
 
 # Initialize Flink stream processor

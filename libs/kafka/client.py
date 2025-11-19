@@ -1,7 +1,6 @@
-"""Kafka client interfaces for producers and consumers.
+"""Kafka producer and consumer clients.
 
-Provides clean, reusable client classes following the same pattern
-as other service clients in the application.
+Provides clean interfaces for producing and consuming Kafka events.
 """
 from typing import Dict, Any, List, Callable, Optional
 import json
@@ -21,7 +20,7 @@ class KafkaProducerClient:
         await producer.close()
     """
     
-    def __init__(self, broker: str = "kafka:29092"):
+    def __init__(self, broker: str = "localhost:9092"):
         """Initialize Kafka producer client.
         
         Args:

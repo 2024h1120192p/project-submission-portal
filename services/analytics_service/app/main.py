@@ -21,7 +21,7 @@ logger = get_logger(__name__)
 settings = get_settings()
 
 # Initialize Kafka client for consuming aggregated windows
-kafka_broker = getattr(settings, 'KAFKA_BROKER', 'kafka:29092')
+kafka_broker = getattr(settings, 'KAFKA_BROKER', 'localhost:9092')
 kafka_client = KafkaConsumerClient(
     broker=kafka_broker,
     group_id="analytics-service",
@@ -91,14 +91,22 @@ async def lifespan(app: FastAPI):
     """Manage application lifecycle."""
     # Startup
     try:
-        # Start Flink stream processor for windowed aggregations
-        await stream_processor.start()
+        # Start Flink stream processor for windowed aggregations (optional for local dev)
+        try:
+            await stream_processor.start()
+            logger.info("Flink stream processor started successfully")
+        except FileNotFoundError as e:
+            logger.warning(f"Flink processor not available (Java not installed): {e}")
+            logger.info("Continuing without Flink - analytics will use fallback mode")
+        except Exception as e:
+            logger.warning(f"Flink processor failed to start: {e}")
+            logger.info("Continuing without Flink - analytics will use fallback mode")
         
         # Start Kafka consumer to receive aggregated windows
         task = asyncio.create_task(start_kafka_consumer())
         analytics_state['consumer_task'] = task
         
-        logger.info("Application started successfully with embedded Flink stream processor")
+        logger.info("Application started successfully")
     except Exception as e:
         logger.error(f"Failed to start services: {e}")
     

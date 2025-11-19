@@ -15,7 +15,7 @@ settings = get_settings()
 
 # Initialize clients
 user_client = UserServiceClient(settings.USERS_SERVICE_URL)
-kafka_broker = getattr(settings, 'KAFKA_BROKER', 'kafka:29092')
+kafka_broker = getattr(settings, 'KAFKA_BROKER', 'localhost:9092')
 kafka_client = KafkaConsumerClient(
     broker=kafka_broker,
     group_id="notification-service",
