@@ -9,7 +9,7 @@ from fastapi.templating import Jinja2Templates
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from services.user_service.app.client import UserServiceClient
+from services.users_service.app.client import UserServiceClient
 from services.submission_service.app.client import SubmissionServiceClient
 from services.plagiarism_service.app.client import PlagiarismServiceClient
 from services.analytics_service.app.client import AnalyticsServiceClient

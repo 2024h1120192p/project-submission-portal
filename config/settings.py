@@ -7,7 +7,7 @@ class Settings(BaseSettings):
     """Application settings with environment variable support."""
     
     # Service URLs
-    USER_SERVICE_URL: str = "http://localhost:8001"
+    USERS_SERVICE_URL: str = "http://localhost:8001"
     SUBMISSION_SERVICE_URL: str = "http://localhost:8002"
     PLAGIARISM_SERVICE_URL: str = "http://localhost:8003"
     ANALYTICS_SERVICE_URL: str = "http://localhost:8004"

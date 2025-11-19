@@ -2,7 +2,7 @@ from fastapi import FastAPI, HTTPException, status
 from pydantic import BaseModel
 from .store import store
 from libs.events.schemas import Notification
-from services.user_service.app.client import UserServiceClient
+from services.users_service.app.client import UserServiceClient
 from config.settings import get_settings
 from typing import List
 import asyncio
@@ -11,7 +11,7 @@ app = FastAPI(title="Notification Service")
 settings = get_settings()
 
 # User service client for validation
-user_client = UserServiceClient(settings.USER_SERVICE_URL)
+user_client = UserServiceClient(settings.USERS_SERVICE_URL)
 
 # Kafka consumer stub (for future implementation)
 class KafkaConsumerStub:

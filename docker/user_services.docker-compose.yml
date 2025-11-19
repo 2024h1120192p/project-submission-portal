@@ -1,0 +1,5 @@
+name: user_services
+
+services:
+  app:
+    build: ../services/users_service

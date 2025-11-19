@@ -1,8 +1,8 @@
 import pytest
 from httpx import AsyncClient
 from fastapi.testclient import TestClient
-from services.user_service.app.main import app
-from services.user_service.app.store import store
+from services.users_service.app.main import app
+from services.users_service.app.store import store
 from libs.events.schemas import User
 
 # Synchronous client for basic tests

@@ -2,7 +2,7 @@ from fastapi import FastAPI, HTTPException, status
 from libs.events.schemas import Submission
 from libs.events.kafka import emit_event
 from .store import SubmissionStore
-from services.user_service.app.client import UserServiceClient
+from services.users_service.app.client import UserServiceClient
 from config.settings import get_settings
 from datetime import datetime, timezone
 import uuid
@@ -13,7 +13,7 @@ store = SubmissionStore()
 settings = get_settings()
 
 # Initialize user service client
-user_service_client = UserServiceClient(settings.USER_SERVICE_URL)
+user_service_client = UserServiceClient(settings.USERS_SERVICE_URL)
 
 
 @app.post("/submissions", response_model=Submission, status_code=status.HTTP_201_CREATED)

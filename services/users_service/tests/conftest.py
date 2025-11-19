@@ -10,7 +10,7 @@ sys.path.insert(0, ROOT)
 @pytest.fixture(autouse=True)
 def reset_user_store():
     """Clear the user store before each test to ensure test isolation."""
-    from services.user_service.app.store import store
+    from services.users_service.app.store import store
     store.users.clear()
     yield
     store.users.clear()

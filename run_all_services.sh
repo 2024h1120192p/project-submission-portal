@@ -23,7 +23,7 @@ uvicorn services.gateway.app.main:app --port 8000 &
 GATEWAY_PID=$!
 
 echo -e "${GREEN}Starting User Service (Port 8001)...${NC}"
-uvicorn services.user_service.app.main:app --port 8001 &
+uvicorn services.users_service.app.main:app --port 8001 &
 USER_PID=$!
 
 echo -e "${GREEN}Starting Submission Service (Port 8002)...${NC}"

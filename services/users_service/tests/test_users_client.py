@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import AsyncMock, Mock
 from httpx import Response
-from services.user_service.app.client import UserServiceClient
+from services.users_service.app.client import UserServiceClient
 from libs.events.schemas import User
 
 

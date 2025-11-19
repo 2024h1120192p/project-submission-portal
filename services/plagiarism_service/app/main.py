@@ -2,7 +2,7 @@ from fastapi import FastAPI, HTTPException, status
 from libs.events.schemas import Submission, PlagiarismResult
 from libs.events.kafka import emit_event
 from .engine import run_plagiarism_pipeline
-from services.user_service.app.client import UserServiceClient
+from services.users_service.app.client import UserServiceClient
 from config.settings import get_settings
 import httpx
 
@@ -10,7 +10,7 @@ app = FastAPI()
 settings = get_settings()
 
 # Initialize service clients
-user_service_client = UserServiceClient(settings.USER_SERVICE_URL)
+user_service_client = UserServiceClient(settings.USERS_SERVICE_URL)
 
 
 class SubmissionServiceClient:

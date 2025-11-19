@@ -2,7 +2,7 @@ import pytest
 import pytest_asyncio
 from httpx import AsyncClient, ASGITransport
 from services.submission_service.app.main import app, user_service_client, store
-from services.user_service.app.client import UserServiceClient
+from services.users_service.app.client import UserServiceClient
 from libs.events.schemas import User, Submission
 from datetime import datetime, timezone
 from unittest.mock import AsyncMock, patch

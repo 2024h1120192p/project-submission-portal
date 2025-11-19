@@ -25,7 +25,7 @@ Project/
 ├── services/                 # 🆕 All microservices grouped here
 │   ├── __init__.py
 │   │
-│   ├── user_service/
+│   ├── users_service/
 │   │   ├── __init__.py       # 🆕 Service entry point
 │   │   ├── app/
 │   │   │   ├── __init__.py
@@ -114,7 +114,7 @@ Project/
 **Before:**
 ```
 Project/
-├── user_service/
+├── users_service/
 ├── submission_service/
 ├── plagiarism_service/
 ├── analytics_service/
@@ -127,7 +127,7 @@ Project/
 ```
 Project/
 ├── services/          # All services grouped
-│   ├── user_service/
+│   ├── users_service/
 │   ├── submission_service/
 │   ├── plagiarism_service/
 │   ├── analytics_service/
@@ -141,13 +141,13 @@ Project/
 
 **Before:**
 ```python
-from user_service.app.main import app
+from users_service.app.main import app
 from libs.events.schemas import User
 ```
 
 **After:**
 ```python
-from services.user_service.app.main import app
+from services.users_service.app.main import app
 from libs.events.schemas import User
 from libs.events.kafka import emit_event
 ```
@@ -181,7 +181,7 @@ kafka_broker = settings.KAFKA_BROKER
 Each service now has a top-level `__init__.py` that exports the app:
 
 ```python
-# services/user_service/__init__.py
+# services/users_service/__init__.py
 from .app.main import app
 __all__ = ["app"]
 ```
@@ -243,7 +243,7 @@ Jinja2Templates(directory="services/gateway/app/templates")
 
 If you have scripts or deployment configs referencing old paths, update them:
 
-- `user_service.app.main:app` → `services.user_service.app.main:app`
+- `users_service.app.main:app` → `services.users_service.app.main:app`
 - `gateway/app/static` → `services/gateway/app/static`
 
 ## Running the Project
@@ -252,7 +252,7 @@ All functionality remains the same:
 
 ```bash
 # Run individual services
-uvicorn services.user_service.app.main:app --port 8001
+uvicorn services.users_service.app.main:app --port 8001
 
 # Run all services
 ./run_all_services.sh
@@ -272,5 +272,5 @@ All 8 tests pass successfully:
 ✓ services/notification_service/tests/test_notification.py::test_notify
 ✓ services/plagiarism_service/tests/test_plagarism.py::test_check
 ✓ services/submission_service/tests/test_submissions.py::test_create_and_get
-✓ services/user_service/tests/test_users.py::test_create_get_user
+✓ services/users_service/tests/test_users.py::test_create_get_user
 ```

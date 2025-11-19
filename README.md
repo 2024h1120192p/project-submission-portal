@@ -8,7 +8,7 @@ This project follows a **microservices architecture** with the following service
 
 ### Services
 
-1. **User Service** (`services/user_service/`) - Port 8001
+1. **User Service** (`services/users_service/`) - Port 8001
    - Manages users (students and faculty)
    - CRUD operations for user accounts
 
@@ -47,7 +47,7 @@ This project follows a **microservices architecture** with the following service
 ```
 Project/
 ├── services/                    # All microservices
-│   ├── user_service/
+│   ├── users_service/
 │   │   ├── app/
 │   │   │   ├── main.py         # FastAPI app
 │   │   │   └── store.py        # Data layer
@@ -92,7 +92,7 @@ Each service can be run independently:
 
 ```bash
 # User Service
-uvicorn services.user_service.app.main:app --port 8001
+uvicorn services.users_service.app.main:app --port 8001
 
 # Submission Service
 uvicorn services.submission_service.app.main:app --port 8002
@@ -117,7 +117,7 @@ uvicorn services.gateway.app.main:app --port 8000
 pytest -q
 
 # Run specific service tests
-pytest services/user_service/tests/ -v
+pytest services/users_service/tests/ -v
 pytest services/submission_service/tests/ -v
 ```
 
@@ -127,7 +127,7 @@ Environment variables can be set in a `.env` file at the project root:
 
 ```env
 # Service URLs
-USER_SERVICE_URL=http://localhost:8001
+USERS_SERVICE_URL=http://localhost:8001
 SUBMISSION_SERVICE_URL=http://localhost:8002
 PLAGIARISM_SERVICE_URL=http://localhost:8003
 ANALYTICS_SERVICE_URL=http://localhost:8004
