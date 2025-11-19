@@ -1,30 +1,15 @@
 """Public routes for the gateway service.
 
 Handles authentication and public pages.
+Gateway only orchestrates - business logic is in client.py and core modules.
 """
 from fastapi import APIRouter, Request, Form
 from fastapi.responses import HTMLResponse, RedirectResponse
-import jwt
-from datetime import datetime, timedelta
+
+from ..core.auth import create_access_token
 
 
 router = APIRouter()
-
-
-# Mock JWT configuration
-SECRET_KEY = "dev-secret-key-change-in-production"
-ALGORITHM = "HS256"
-
-
-def create_access_token(user_id: str, role: str) -> str:
-    """Create a mock JWT token for development."""
-    expire = datetime.utcnow() + timedelta(hours=24)
-    payload = {
-        "sub": user_id,
-        "role": role,
-        "exp": expire
-    }
-    return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
 
 
 @router.get("/", response_class=HTMLResponse)
@@ -49,32 +34,29 @@ async def login_page(request: Request):
 
 @router.post("/login")
 async def login(request: Request, email: str = Form(...), password: str = Form(...)):
-    """Handle login - mock authentication with real user service call."""
+    """Handle login - orchestrate authentication through client."""
     clients = request.state.clients
-    templates = request.state.templates
     
-    # Mock user lookup - in real app would validate password
-    # For demo: student emails contain "student", faculty contain "faculty"
-    if "student" in email.lower():
-        user_id = "student_001"
-        role = "student"
-    elif "faculty" in email.lower():
-        user_id = "faculty_001"
-        role = "faculty"
-    else:
-        # Default to student
-        user_id = "user_001"
-        role = "student"
+    # Orchestrate authentication through client
+    user = await clients.authenticate_user(email, password)
     
-    # Attempt to fetch user from user service
-    user = await clients.user.get_user(user_id)
-    
+    # Determine user details for token
     if user:
-        # User exists - use real data
-        role = user.role
         user_id = user.id
+        role = user.role
+    else:
+        # Fallback for demo: derive from email pattern
+        if "student" in email.lower():
+            user_id = "student_001"
+            role = "student"
+        elif "faculty" in email.lower():
+            user_id = "faculty_001"
+            role = "faculty"
+        else:
+            user_id = "user_001"
+            role = "student"
     
-    # Create JWT token
+    # Create JWT token using auth utility
     token = create_access_token(user_id, role)
     
     # Redirect to appropriate dashboard based on role

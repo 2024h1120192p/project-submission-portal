@@ -9,12 +9,7 @@ from fastapi.templating import Jinja2Templates
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from services.users_service.app.client import UserServiceClient
-from services.submission_service.app.client import SubmissionServiceClient
-from services.plagiarism_service.app.client import PlagiarismServiceClient
-from services.analytics_service.app.client import AnalyticsServiceClient
-from services.notification_service.app.client import NotificationServiceClient
-
+from .client import ServiceClients
 from .api.routes_public import router as public_router
 from .api.routes_dashboard import router as dashboard_router
 from .api.routes_submissions import router as submissions_router
@@ -28,25 +23,6 @@ ANALYTICS_URL = "http://localhost:8004"
 NOTIFY_URL = "http://localhost:8005"
 
 
-class ServiceClients:
-    """Container for all microservice clients."""
-    
-    def __init__(self):
-        self.user = UserServiceClient(USER_URL)
-        self.submission = SubmissionServiceClient(SUB_URL)
-        self.plagiarism = PlagiarismServiceClient(PLAG_URL)
-        self.analytics = AnalyticsServiceClient(ANALYTICS_URL)
-        self.notification = NotificationServiceClient(NOTIFY_URL)
-    
-    async def close_all(self):
-        """Close all client connections."""
-        await self.user.client.close()
-        await self.submission.close()
-        await self.plagiarism.close()
-        await self.analytics.close()
-        await self.notification.close()
-
-
 # Global clients instance
 clients: ServiceClients = None
 
@@ -57,7 +33,13 @@ async def lifespan(app: FastAPI):
     global clients
     
     # Startup: Initialize all service clients
-    clients = ServiceClients()
+    clients = ServiceClients(
+        user_url=USER_URL,
+        submission_url=SUB_URL,
+        plagiarism_url=PLAG_URL,
+        analytics_url=ANALYTICS_URL,
+        notification_url=NOTIFY_URL
+    )
     print("✓ Gateway service started - all clients initialized")
     
     yield
