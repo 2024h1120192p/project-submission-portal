@@ -14,6 +14,7 @@ from .store import get_latest, get_history, add_window
 from .stream_processor import create_stream_processor
 from config.settings import get_settings
 import asyncio
+import httpx
 from datetime import datetime, timezone
 
 logger = get_logger(__name__)
@@ -87,7 +88,7 @@ async def start_kafka_consumer():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Manage application lifecycle.\"\"\"
+    """Manage application lifecycle."""
     # Startup
     try:
         # Start Flink stream processor for windowed aggregations
@@ -99,7 +100,7 @@ async def lifespan(app: FastAPI):
         
         logger.info("Application started successfully with embedded Flink stream processor")
     except Exception as e:
-        logger.error(f\"Failed to start services: {e}\")
+        logger.error(f"Failed to start services: {e}")
     
     yield
     
@@ -110,9 +111,9 @@ async def lifespan(app: FastAPI):
         
         await stream_processor.stop()
         await kafka_client.close()
-        logger.info(\"Application shutdown complete\")
+        logger.info("Application shutdown complete")
     except Exception as e:
-        logger.error(f\"Error during shutdown: {e}\")
+        logger.error(f"Error during shutdown: {e}")
 
 
 app = FastAPI(title="Analytics Service", lifespan=lifespan)

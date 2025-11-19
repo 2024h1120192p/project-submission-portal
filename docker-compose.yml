@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   postgres:
     image: postgres:15-alpine
@@ -93,8 +91,9 @@ services:
       - "8081:8081"
     command: jobmanager
     environment:
-      - FLINK_PROPERTIES=jobmanager.rpc.address: flink-jobmanager
-      - JOB_MANAGER_RPC_ADDRESS=flink-jobmanager
+      - |
+        FLINK_PROPERTIES=
+        jobmanager.rpc.address: flink-jobmanager
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8081/"]
       interval: 10s
@@ -112,30 +111,10 @@ services:
         condition: service_healthy
     command: taskmanager
     environment:
-      - FLINK_PROPERTIES=jobmanager.rpc.address: flink-jobmanager
-      - JOB_MANAGER_RPC_ADDRESS=flink-jobmanager
-      - TASK_MANAGER_NUMBER_OF_TASK_SLOTS=4
-    volumes:
-      - ./flink-jobs:/opt/flink/jobs
-
-  flink-python-jobs:
-    build:
-      context: .
-      dockerfile: flink-jobs/Dockerfile
-    container_name: paper-submission-flink-jobs
-    depends_on:
-      flink-jobmanager:
-        condition: service_healthy
-      kafka:
-        condition: service_healthy
-    environment:
-      - KAFKA_BROKER=kafka:29092
-      - FLINK_JOBMANAGER=flink-jobmanager:8081
-    volumes:
-      - ./flink-jobs:/opt/flink-jobs
-      - ./libs:/opt/libs
-      - ./config:/opt/config
-    command: python /opt/flink-jobs/submit_jobs.py
+      - |
+        FLINK_PROPERTIES=
+        jobmanager.rpc.address: flink-jobmanager
+        taskmanager.numberOfTaskSlots: 4
 
 volumes:
   postgres_data:

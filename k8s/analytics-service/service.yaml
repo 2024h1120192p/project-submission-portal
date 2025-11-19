@@ -8,8 +8,8 @@ metadata:
 spec:
   type: ClusterIP
   ports:
-  - port: 8002
-    targetPort: 8002
+  - port: 8004
+    targetPort: 8004
     protocol: TCP
     name: http
   selector:

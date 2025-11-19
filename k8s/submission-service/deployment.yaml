@@ -20,7 +20,7 @@ spec:
         image: paper-submission-portal/submission_service:latest
         imagePullPolicy: IfNotPresent
         ports:
-        - containerPort: 8005
+        - containerPort: 8002
         env:
         - name: LOG_LEVEL
           valueFrom:

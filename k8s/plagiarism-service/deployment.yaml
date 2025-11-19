@@ -20,7 +20,7 @@ spec:
         image: paper-submission-portal/plagiarism_service:latest
         imagePullPolicy: IfNotPresent
         ports:
-        - containerPort: 8004
+        - containerPort: 8003
         env:
         - name: LOG_LEVEL
           valueFrom:
