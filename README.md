@@ -1,6 +1,6 @@
-# Project Submission Portal
+# Paper Submission Portal
 
-A microservices-based plagiarism detection system for academic submissions.
+A microservices-based plagiarism detection system for research paper submissions.
 
 ## Architecture
 
@@ -13,16 +13,16 @@ This project follows a **microservices architecture** with the following service
    - CRUD operations for user accounts
 
 2. **Submission Service** (`services/submission_service/`) - Port 8002
-   - Handles assignment submissions
+   - Handles research paper submissions
    - Emits submission events to Kafka
 
 3. **Plagiarism Service** (`services/plagiarism_service/`) - Port 8003
-   - Detects plagiarism (internal/external)
+   - Detects plagiarism in research papers (internal/external)
    - AI-generated content detection
    - Emits plagiarism check results
 
 4. **Analytics Service** (`services/analytics_service/`) - Port 8004
-   - Provides submission and plagiarism analytics
+   - Provides paper submission and plagiarism analytics
    - Tracks trends and spikes
 
 5. **Notification Service** (`services/notification_service/`) - Port 8005
@@ -30,7 +30,7 @@ This project follows a **microservices architecture** with the following service
 
 6. **Gateway** (`services/gateway/`) - Port 8000
    - Web frontend and API gateway
-   - User interface for students and faculty
+   - User interface for researchers and reviewers
 
 ### Shared Libraries
 
@@ -167,12 +167,12 @@ Services communicate via Kafka events:
 - `DELETE /users/{id}` - Delete user
 
 ### Submission Service (Port 8002)
-- `POST /submissions` - Create submission
-- `GET /submissions/{id}` - Get submission
-- `GET /submissions/user/{user_id}` - Get user's submissions
+- `POST /submissions` - Create paper submission
+- `GET /submissions/{id}` - Get paper submission
+- `GET /submissions/user/{user_id}` - Get user's paper submissions
 
 ### Plagiarism Service (Port 8003)
-- `POST /check` - Check submission for plagiarism
+- `POST /check` - Check research paper for plagiarism
 
 ### Analytics Service (Port 8004)
 - `GET /analytics/latest` - Get latest analytics window

@@ -4,7 +4,7 @@
     <!-- Header -->
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; padding-bottom: 15px; border-bottom: 2px solid #6f42c1;">
         <div>
-            <h1 style="margin: 0;">Faculty Dashboard</h1>
+            <h1 style="margin: 0;">Reviewer Dashboard</h1>
             {% if user %}
             <p style="margin: 5px 0 0 0; color: #666;">Welcome, {{ user.name }} ({{ user.email }})</p>
             {% endif %}
@@ -15,7 +15,7 @@
     <!-- Stats Overview -->
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px;">
         <div style="padding: 20px; background: #6f42c1; color: white; border-radius: 8px;">
-            <h3 style="margin: 0 0 10px 0;">Total Submissions</h3>
+            <h3 style="margin: 0 0 10px 0;">Total Papers</h3>
             <p style="font-size: 2em; margin: 0; font-weight: bold;">{{ total_submissions }}</p>
         </div>
         
@@ -41,15 +41,15 @@
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-bottom: 30px;">
         <!-- Recent Submissions -->
         <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-            <h2 style="margin: 0 0 20px 0;">Recent Submissions</h2>
+            <h2 style="margin: 0 0 20px 0;">Recent Paper Submissions</h2>
             
             {% if recent_submissions %}
             <div style="max-height: 400px; overflow-y: auto;">
                 {% for sub in recent_submissions %}
                 <div style="padding: 15px; margin-bottom: 10px; background: #f8f9fa; border-left: 3px solid #6f42c1; border-radius: 4px;">
                     <p style="margin: 0; font-weight: bold;">{{ sub.id[:16] }}...</p>
-                    <p style="margin: 5px 0; color: #666; font-size: 0.9em;">Student: {{ sub.user_id }}</p>
-                    <p style="margin: 5px 0; color: #666; font-size: 0.9em;">Assignment: {{ sub.assignment_id }}</p>
+                    <p style="margin: 5px 0; color: #666; font-size: 0.9em;">Researcher: {{ sub.user_id }}</p>
+                    <p style="margin: 5px 0; color: #666; font-size: 0.9em;">Conference: {{ sub.assignment_id }}</p>
                     <p style="margin: 5px 0 0 0; color: #666; font-size: 0.9em;">
                         <strong>{{ sub.uploaded_at.strftime('%Y-%m-%d %H:%M') }}</strong>
                     </p>
@@ -109,8 +109,8 @@
                 <thead>
                     <tr style="background: #f8f9fa; border-bottom: 2px solid #dee2e6;">
                         <th style="padding: 12px; text-align: left;">Submission ID</th>
-                        <th style="padding: 12px; text-align: left;">Student ID</th>
-                        <th style="padding: 12px; text-align: left;">Assignment</th>
+                        <th style="padding: 12px; text-align: left;">Researcher ID</th>
+                        <th style="padding: 12px; text-align: left;">Conference</th>
                         <th style="padding: 12px; text-align: left;">Upload Time</th>
                         <th style="padding: 12px; text-align: left;">File</th>
                     </tr>

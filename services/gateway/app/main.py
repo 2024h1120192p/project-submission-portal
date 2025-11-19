@@ -17,6 +17,7 @@ from services.notification_service.app.client import NotificationServiceClient
 
 from .api.routes_public import router as public_router
 from .api.routes_dashboard import router as dashboard_router
+from .api.routes_submissions import router as submissions_router
 
 
 # Microservice URLs
@@ -93,10 +94,16 @@ async def add_clients_to_request(request: Request, call_next):
 # Mount static files
 app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
 
+# Create uploads directory if it doesn't exist
+uploads_dir = Path("./uploads")
+uploads_dir.mkdir(exist_ok=True)
+app.mount("/uploads", StaticFiles(directory="./uploads"), name="uploads")
+
 
 # Register routers
 app.include_router(public_router, tags=["public"])
 app.include_router(dashboard_router, tags=["dashboard"])
+app.include_router(submissions_router, tags=["submissions"])
 
 
 if __name__ == "__main__":

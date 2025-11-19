@@ -11,7 +11,7 @@ echo "Deploying to Kubernetes..."
 echo "Applying base configurations..."
 echo "Creating namespace..."
 kubectl apply -f k8s/base/namespace.yaml
-kubectl wait --for=condition=Active --timeout=30s namespace/project-submission-portal
+kubectl wait --for=condition=Active --timeout=30s namespace/paper-submission-portal
 
 echo "Applying secrets and configmaps..."
 kubectl apply -f k8s/base/secrets.yaml
@@ -32,8 +32,8 @@ echo "Deployment complete!"
 echo "========================================="
 echo ""
 echo "Check status with:"
-echo "  kubectl get pods -n project-submission-portal"
-echo "  kubectl get services -n project-submission-portal"
+echo "  kubectl get pods -n paper-submission-portal"
+echo "  kubectl get services -n paper-submission-portal"
 echo ""
 echo "View logs with:"
-echo "  kubectl logs -f deployment/<service-name> -n project-submission-portal"
+echo "  kubectl logs -f deployment/<service-name> -n paper-submission-portal"

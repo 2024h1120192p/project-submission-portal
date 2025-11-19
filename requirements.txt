@@ -10,3 +10,9 @@ pytest
 pytest-asyncio
 httpx
 pyjwt
+sqlalchemy[asyncio]
+asyncpg
+psycopg2-binary
+motor
+redis
+aiofiles

@@ -20,7 +20,7 @@ class User(BaseModel):
 
 
 class Submission(BaseModel):
-    """Submission model for event payloads."""
+    """Research paper submission model for event payloads."""
     
     model_config = ConfigDict(from_attributes=True)
     
@@ -33,7 +33,7 @@ class Submission(BaseModel):
 
 
 class PlagiarismResult(BaseModel):
-    """Plagiarism detection result model for event payloads."""
+    """Plagiarism detection result for research papers."""
     
     model_config = ConfigDict(from_attributes=True)
     
@@ -45,7 +45,7 @@ class PlagiarismResult(BaseModel):
 
 
 class AnalyticsWindow(BaseModel):
-    """Analytics time window aggregation model for event payloads."""
+    """Analytics time window for paper submission aggregation."""
     
     model_config = ConfigDict(from_attributes=True)
     

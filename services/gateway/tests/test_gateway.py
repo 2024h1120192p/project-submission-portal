@@ -15,7 +15,7 @@ def test_home(client):
     """Test home page renders."""
     response = client.get("/")
     assert response.status_code == 200
-    assert b"Project Submission Portal" in response.content
+    assert b"Paper Submission Portal" in response.content
 
 
 def test_login_page(client):

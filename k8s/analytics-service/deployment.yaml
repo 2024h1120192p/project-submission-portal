@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: analytics-service
-  namespace: project-submission-portal
+  namespace: paper-submission-portal
   labels:
     app: analytics-service
 spec:

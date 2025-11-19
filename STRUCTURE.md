@@ -1,6 +1,6 @@
-# Project Structure Overview
+# Paper Submission Portal Structure Overview
 
-This document explains the reorganized microservices structure.
+This document explains the reorganized microservices structure for the research paper submission system.
 
 ## New Structure
 

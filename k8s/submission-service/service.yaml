@@ -2,7 +2,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: submission-service
-  namespace: project-submission-portal
+  namespace: paper-submission-portal
   labels:
     app: submission-service
 spec:
