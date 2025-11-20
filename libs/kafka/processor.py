@@ -9,8 +9,10 @@ import asyncio
 from abc import ABC, abstractmethod
 from aiokafka import AIOKafkaProducer, AIOKafkaConsumer
 from config.logging import get_logger
+from config.settings import get_settings
 
 logger = get_logger(__name__)
+settings = get_settings()
 
 
 class KafkaStreamProcessor(ABC):
@@ -44,7 +46,7 @@ class KafkaStreamProcessor(ABC):
         input_topics: List[str],
         output_topic: str,
         group_id: str,
-        kafka_broker: str = "kafka:29092"
+        kafka_broker: str = None
     ):
         """Initialize the stream processor.
         
@@ -52,8 +54,10 @@ class KafkaStreamProcessor(ABC):
             input_topics: List of topics to consume from
             output_topic: Topic to produce processed events to
             group_id: Kafka consumer group ID
-            kafka_broker: Kafka broker address
+            kafka_broker: Kafka broker address (defaults to settings.KAFKA_BROKER if not provided)
         """
+        if kafka_broker is None:
+            kafka_broker = settings.KAFKA_BROKER
         self.input_topics = input_topics
         self.output_topic = output_topic
         self.group_id = group_id

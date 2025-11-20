@@ -28,8 +28,10 @@ from pyflink.datastream.functions import AggregateFunction
 from pyflink.datastream.window import TumblingProcessingTimeWindows
 from pyflink.common import Time, WatermarkStrategy, Duration
 from config.logging import get_logger
+from config.settings import get_settings
 
 logger = get_logger(__name__)
+settings = get_settings()
 
 
 def _create_flink_env(
@@ -128,31 +130,44 @@ class FlinkStreamProcessor(ABC):
     
     def __init__(
         self,
-        kafka_broker: str = "kafka:29092",
+        kafka_broker: str = None,
         window_minutes: int = 5,
         output_topic: str = "output",
         group_id: str = "flink-processor-group",
         job_name: str = "Flink Stream Processor",
-        flink_mode: str = "local",
-        flink_host: str = "flink-jobmanager",
-        flink_port: int = 8081,
+        flink_mode: str = None,
+        flink_host: str = None,
+        flink_port: int = None,
         flink_managed_endpoint: str = None,
         flink_managed_api_key: str = None
     ):
         """Initialize the Flink stream processor.
         
         Args:
-            kafka_broker: Kafka broker address
+            kafka_broker: Kafka broker address (defaults to settings.KAFKA_BROKER)
             window_minutes: Window size in minutes for tumbling windows
             output_topic: Kafka topic to send aggregated results to
             group_id: Kafka consumer group ID
             job_name: Name for the Flink job
-            flink_mode: Execution mode - "local", "remote", or "managed"
-            flink_host: Flink JobManager hostname/IP (for remote mode)
-            flink_port: Flink JobManager REST API port (for remote mode)
-            flink_managed_endpoint: Managed Flink service endpoint (for managed mode)
-            flink_managed_api_key: API key for managed service (for managed mode)
+            flink_mode: Execution mode - "local", "remote", or "managed" (defaults to settings.FLINK_MODE)
+            flink_host: Flink JobManager hostname/IP (defaults to settings.FLINK_JOBMANAGER_HOST)
+            flink_port: Flink JobManager REST API port (defaults to settings.FLINK_JOBMANAGER_PORT)
+            flink_managed_endpoint: Managed Flink service endpoint (defaults to settings.FLINK_MANAGED_ENDPOINT)
+            flink_managed_api_key: API key for managed service (defaults to settings.FLINK_MANAGED_API_KEY)
         """
+        # Apply defaults from settings if not provided
+        if kafka_broker is None:
+            kafka_broker = settings.KAFKA_BROKER
+        if flink_mode is None:
+            flink_mode = settings.FLINK_MODE
+        if flink_host is None:
+            flink_host = settings.FLINK_JOBMANAGER_HOST
+        if flink_port is None:
+            flink_port = settings.FLINK_JOBMANAGER_PORT
+        if flink_managed_endpoint is None:
+            flink_managed_endpoint = settings.FLINK_MANAGED_ENDPOINT
+        if flink_managed_api_key is None:
+            flink_managed_api_key = settings.FLINK_MANAGED_API_SECRET
         self.kafka_broker = kafka_broker
         self.window_minutes = window_minutes
         self.output_topic = output_topic

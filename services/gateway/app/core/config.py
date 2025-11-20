@@ -1,6 +1,4 @@
-import os
+"""Gateway service configuration - uses centralized config."""
+from config.settings import get_settings
 
-class Settings:
-    SECRET_KEY: str = os.getenv("SECRET_KEY", "dev")
-
-settings = Settings()
+settings = get_settings()

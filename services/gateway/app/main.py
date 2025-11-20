@@ -13,14 +13,9 @@ from .client import ServiceClients
 from .api.routes_public import router as public_router
 from .api.routes_dashboard import router as dashboard_router
 from .api.routes_submissions import router as submissions_router
+from config.settings import get_settings
 
-
-# Microservice URLs
-USER_URL = "http://localhost:8001"
-SUB_URL = "http://localhost:8002"
-PLAG_URL = "http://localhost:8003"
-ANALYTICS_URL = "http://localhost:8004"
-NOTIFY_URL = "http://localhost:8005"
+settings = get_settings()
 
 
 # Global clients instance
@@ -34,11 +29,11 @@ async def lifespan(app: FastAPI):
     
     # Startup: Initialize all service clients
     clients = ServiceClients(
-        user_url=USER_URL,
-        submission_url=SUB_URL,
-        plagiarism_url=PLAG_URL,
-        analytics_url=ANALYTICS_URL,
-        notification_url=NOTIFY_URL
+        user_url=settings.USERS_SERVICE_URL,
+        submission_url=settings.SUBMISSION_SERVICE_URL,
+        plagiarism_url=settings.PLAGIARISM_SERVICE_URL,
+        analytics_url=settings.ANALYTICS_SERVICE_URL,
+        notification_url=settings.NOTIFICATION_SERVICE_URL
     )
     print("✓ Gateway service started - all clients initialized")
     
@@ -77,9 +72,9 @@ async def add_clients_to_request(request: Request, call_next):
 app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
 
 # Create uploads directory if it doesn't exist
-uploads_dir = Path("./uploads")
+uploads_dir = Path(settings.UPLOAD_DIR)
 uploads_dir.mkdir(exist_ok=True)
-app.mount("/uploads", StaticFiles(directory="./uploads"), name="uploads")
+app.mount("/uploads", StaticFiles(directory=settings.UPLOAD_DIR), name="uploads")
 
 
 # Register routers

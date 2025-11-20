@@ -7,8 +7,10 @@ import json
 import asyncio
 from aiokafka import AIOKafkaProducer, AIOKafkaConsumer
 from config.logging import get_logger
+from config.settings import get_settings
 
 logger = get_logger(__name__)
+settings = get_settings()
 
 # Retry configuration
 MAX_RETRIES = 5
@@ -26,12 +28,14 @@ class KafkaProducerClient:
         await producer.close()
     """
     
-    def __init__(self, broker: str = "localhost:9092"):
+    def __init__(self, broker: str = None):
         """Initialize Kafka producer client.
         
         Args:
-            broker: Kafka broker address
+            broker: Kafka broker address (defaults to settings.KAFKA_BROKER if not provided)
         """
+        if broker is None:
+            broker = settings.KAFKA_BROKER
         self.broker = broker
         self.producer: Optional[AIOKafkaProducer] = None
         self._started = False
@@ -130,17 +134,19 @@ class KafkaConsumerClient:
     
     def __init__(
         self,
-        broker: str = "kafka:29092",
+        broker: str = None,
         group_id: str = "default-group",
         topics: Optional[List[str]] = None
     ):
         """Initialize Kafka consumer client.
         
         Args:
-            broker: Kafka broker address
+            broker: Kafka broker address (defaults to settings.KAFKA_BROKER if not provided)
             group_id: Consumer group ID for offset tracking
             topics: List of topics to subscribe to
         """
+        if broker is None:
+            broker = settings.KAFKA_BROKER
         self.broker = broker
         self.group_id = group_id
         self.topics = topics or []
