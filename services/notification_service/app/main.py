@@ -15,7 +15,8 @@ settings = get_settings()
 
 # Initialize clients
 user_client = UserServiceClient(settings.USERS_SERVICE_URL)
-kafka_broker = getattr(settings, 'KAFKA_BROKER', 'localhost:9092')
+# Use configured Kafka broker from settings
+kafka_broker = settings.KAFKA_BROKER
 kafka_client = KafkaConsumerClient(
     broker=kafka_broker,
     group_id="notification-service",
@@ -25,6 +26,7 @@ kafka_client = KafkaConsumerClient(
 # Notification state
 notification_state = {
     'consumer_task': None,
+    'kafka_available': False,
 }
 
 
@@ -83,12 +85,20 @@ async def handle_submission_event(event: dict):
 
 
 async def start_kafka_consumer():
-    """Start consuming events from Kafka (Flink-processed topics)."""
+    """Start consuming events from Kafka (Flink-processed topics) with graceful handling."""
     kafka_client.register_handler("paper_uploaded_processed", handle_submission_event)
     kafka_client.register_handler("plagiarism_checked_processed", handle_plagiarism_event)
     
-    await kafka_client.start()
-    await kafka_client.consume()
+    if await kafka_client.start(skip_on_error=True):
+        notification_state['kafka_available'] = True
+        logger.info("Kafka consumer connected successfully")
+        try:
+            await kafka_client.consume()
+        except asyncio.CancelledError:
+            logger.info("Kafka consumer cancelled")
+    else:
+        notification_state['kafka_available'] = False
+        logger.warning("Kafka consumer unavailable - notifications from Kafka events disabled")
 
 
 @asynccontextmanager
@@ -103,6 +113,11 @@ async def lifespan(app: FastAPI):
     
     # Shutdown
     task.cancel()
+    try:
+        await task
+    except asyncio.CancelledError:
+        pass
+    
     try:
         await kafka_client.close()
         await user_client.client.close()

@@ -43,6 +43,15 @@ class Settings(BaseSettings):
     REDIS_PORT: int = 6379
     REDIS_DB: int = 0
     
+    # Flink Configuration
+    FLINK_MODE: str = "local"  # Options: "local", "remote", "managed"
+    FLINK_JOBMANAGER_HOST: str = "localhost"
+    FLINK_JOBMANAGER_PORT: int = 8081
+    # For managed Flink (AWS Kinesis, Confluent Cloud, etc.)
+    FLINK_MANAGED_ENDPOINT: str = ""  # e.g., https://your-flink-cluster.cloud
+    FLINK_MANAGED_API_KEY: str = ""
+    FLINK_MANAGED_API_SECRET: str = ""
+    
     # File Upload Configuration
     UPLOAD_DIR: str = "./uploads"
     MAX_UPLOAD_SIZE: int = 10 * 1024 * 1024  # 10MB

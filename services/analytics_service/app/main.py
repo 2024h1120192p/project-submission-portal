@@ -21,21 +21,22 @@ logger = get_logger(__name__)
 settings = get_settings()
 
 # Initialize Kafka client for consuming aggregated windows
-kafka_broker = getattr(settings, 'KAFKA_BROKER', 'localhost:9092')
 kafka_client = KafkaConsumerClient(
-    broker=kafka_broker,
+    broker=settings.KAFKA_BROKER,
     group_id="analytics-service",
     topics=["analytics_window"]  # Consume Flink-aggregated analytics topic
 )
 
 # Initialize Flink stream processor for windowed aggregations
-stream_processor = create_stream_processor(kafka_broker=kafka_broker, window_minutes=5)
+# Mode is configured via settings: local (dev), remote (self-hosted), or managed (cloud)
+stream_processor = create_stream_processor(window_minutes=5)
 
 # Analytics state
 analytics_state = {
     'latest_window': None,
     'windows_history': [],
     'consumer_task': None,
+    'kafka_available': False,
 }
 
 
@@ -79,11 +80,19 @@ async def handle_analytics_window(event: dict):
 
 
 async def start_kafka_consumer():
-    """Start consuming pre-aggregated analytics windows from Flink."""
+    """Start consuming pre-aggregated analytics windows from Flink with graceful handling."""
     kafka_client.register_handler("analytics_window", handle_analytics_window)
     
-    await kafka_client.start()
-    await kafka_client.consume()
+    if await kafka_client.start(skip_on_error=True):
+        analytics_state['kafka_available'] = True
+        logger.info("Kafka consumer connected successfully")
+        try:
+            await kafka_client.consume()
+        except asyncio.CancelledError:
+            logger.info("Kafka consumer cancelled")
+    else:
+        analytics_state['kafka_available'] = False
+        logger.warning("Kafka consumer unavailable - analytics events from Kafka disabled")
 
 
 @asynccontextmanager
@@ -116,6 +125,10 @@ async def lifespan(app: FastAPI):
     try:
         if analytics_state['consumer_task']:
             analytics_state['consumer_task'].cancel()
+            try:
+                await analytics_state['consumer_task']
+            except asyncio.CancelledError:
+                pass
         
         await stream_processor.stop()
         await kafka_client.close()

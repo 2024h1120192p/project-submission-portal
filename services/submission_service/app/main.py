@@ -19,7 +19,8 @@ store = SubmissionStore()
 
 # Initialize clients
 user_service_client = UserServiceClient(settings.USERS_SERVICE_URL)
-kafka_broker = getattr(settings, 'KAFKA_BROKER', 'localhost:9092')
+# Use configured Kafka broker from settings
+kafka_broker = settings.KAFKA_BROKER
 kafka_client = KafkaProducerClient(broker=kafka_broker)
 
 # Initialize Flink stream processor
@@ -29,16 +30,30 @@ stream_processor = create_stream_processor(kafka_broker=kafka_broker)
 UPLOAD_DIR = Path(settings.UPLOAD_DIR)
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
+# Track Kafka availability
+kafka_available = False
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Manage application lifecycle."""
+    global kafka_available
     # Startup
     try:
-        await kafka_client.start()
-        # Start Flink stream processor for consuming and enriching events
-        await stream_processor.start()
-        logger.info("Application started successfully with Flink stream processor")
+        kafka_available = await kafka_client.start(skip_on_error=True)
+        if kafka_available:
+            logger.info("Kafka producer started successfully")
+        else:
+            logger.warning("Kafka producer unavailable - running in fallback mode")
+        
+        # Start Flink stream processor for consuming and enriching events (also graceful)
+        try:
+            await stream_processor.start()
+            logger.info("Stream processor started successfully")
+        except Exception as e:
+            logger.warning(f"Stream processor failed to start: {e} - continuing without it")
+        
+        logger.info("Application started successfully")
     except Exception as e:
         logger.error(f"Failed to start services: {e}")
     

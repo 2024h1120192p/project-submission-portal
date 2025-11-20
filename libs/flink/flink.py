@@ -3,6 +3,11 @@
 Provides clean, reusable base class for Flink-based stream processing
 with time-based windowing, following the same pattern as Kafka clients.
 
+Supports three execution modes:
+1. LOCAL: Embedded mini-cluster in the same process (dev/testing only)
+2. REMOTE: Self-hosted Flink cluster (deployed in Docker/K8s)
+3. MANAGED: Fully managed Flink service (AWS Kinesis, Confluent Cloud, etc.)
+
 Flink is only used for:
 - Time-based windowing (tumbling, sliding, session windows)
 - Event time processing with watermarks
@@ -25,6 +30,64 @@ from pyflink.common import Time, WatermarkStrategy, Duration
 from config.logging import get_logger
 
 logger = get_logger(__name__)
+
+
+def _create_flink_env(
+    mode: str = "local",
+    host: str = "flink-jobmanager",
+    port: int = 8081,
+    managed_endpoint: str = None,
+    managed_api_key: str = None
+) -> StreamExecutionEnvironment:
+    """Create a Flink execution environment based on deployment mode.
+    
+    Args:
+        mode: Execution mode - "local", "remote", or "managed"
+        host: Flink JobManager hostname/IP (for remote mode)
+        port: Flink JobManager REST API port (for remote mode)
+        managed_endpoint: Managed Flink service endpoint (for managed mode)
+        managed_api_key: API key for managed service authentication
+        
+    Returns:
+        Configured StreamExecutionEnvironment
+    """
+    env = StreamExecutionEnvironment.get_execution_environment()
+    
+    if mode == "local":
+        # Local mini-cluster (embedded in process) - for development only
+        logger.info("Creating LOCAL Flink environment (mini-cluster)")
+        logger.warning("Local mode is NOT production-ready. Use remote or managed mode.")
+        # Local environment is the default
+        
+    elif mode == "remote":
+        # Self-hosted Flink cluster (Docker/K8s)
+        logger.info(f"Creating REMOTE Flink environment pointing to {host}:{port}")
+        env.get_config().set_string("jobmanager.rpc.address", host)
+        env.get_config().set_string("jobmanager.rpc.port", str(port))
+        
+    elif mode == "managed":
+        # Fully managed Flink service (AWS Kinesis, Confluent Cloud, etc.)
+        logger.info(f"Creating MANAGED Flink environment pointing to {managed_endpoint}")
+        if not managed_endpoint:
+            raise ValueError("Managed endpoint required for managed mode")
+        
+        # Configure for managed service
+        # Note: Specific configuration depends on the managed service provider
+        # For AWS Kinesis Data Analytics:
+        env.get_config().set_string("execution.target", "kinesis")
+        env.get_config().set_string("kinesis.analytics.endpoint", managed_endpoint)
+        
+        # For Confluent Cloud:
+        # env.get_config().set_string("execution.target", "confluent-cloud")
+        # env.get_config().set_string("confluent.cloud.endpoint", managed_endpoint)
+        
+        if managed_api_key:
+            env.get_config().set_string("security.credentials.api-key", managed_api_key)
+    
+    else:
+        raise ValueError(f"Invalid Flink mode: {mode}. Must be 'local', 'remote', or 'managed'")
+    
+    return env
 
 
 class FlinkStreamProcessor(ABC):
@@ -69,7 +132,12 @@ class FlinkStreamProcessor(ABC):
         window_minutes: int = 5,
         output_topic: str = "output",
         group_id: str = "flink-processor-group",
-        job_name: str = "Flink Stream Processor"
+        job_name: str = "Flink Stream Processor",
+        flink_mode: str = "local",
+        flink_host: str = "flink-jobmanager",
+        flink_port: int = 8081,
+        flink_managed_endpoint: str = None,
+        flink_managed_api_key: str = None
     ):
         """Initialize the Flink stream processor.
         
@@ -79,12 +147,22 @@ class FlinkStreamProcessor(ABC):
             output_topic: Kafka topic to send aggregated results to
             group_id: Kafka consumer group ID
             job_name: Name for the Flink job
+            flink_mode: Execution mode - "local", "remote", or "managed"
+            flink_host: Flink JobManager hostname/IP (for remote mode)
+            flink_port: Flink JobManager REST API port (for remote mode)
+            flink_managed_endpoint: Managed Flink service endpoint (for managed mode)
+            flink_managed_api_key: API key for managed service (for managed mode)
         """
         self.kafka_broker = kafka_broker
         self.window_minutes = window_minutes
         self.output_topic = output_topic
         self.group_id = group_id
         self.job_name = job_name
+        self.flink_mode = flink_mode
+        self.flink_host = flink_host
+        self.flink_port = flink_port
+        self.flink_managed_endpoint = flink_managed_endpoint
+        self.flink_managed_api_key = flink_managed_api_key
         self.env: Optional[StreamExecutionEnvironment] = None
     
     @abstractmethod
@@ -159,16 +237,20 @@ class FlinkStreamProcessor(ABC):
     def _create_pipeline(self) -> StreamExecutionEnvironment:
         """Create and configure the Flink streaming pipeline with windowing.
         
+        Connects to Flink cluster based on configured mode and builds the pipeline.
+        
         Returns:
             Configured Flink execution environment
         """
-        # Create execution environment
-        self.env = StreamExecutionEnvironment.get_execution_environment()
+        # Create execution environment based on mode
+        self.env = _create_flink_env(
+            mode=self.flink_mode,
+            host=self.flink_host,
+            port=self.flink_port,
+            managed_endpoint=self.flink_managed_endpoint,
+            managed_api_key=self.flink_managed_api_key
+        )
         self.env.set_parallelism(1)
-        
-        # Add Kafka connector JARs
-        kafka_jar = "flink-sql-connector-kafka-1.18.0.jar"
-        self.env.add_jars(f"file:///opt/flink/lib/{kafka_jar}")
         
         logger.info(f"Creating Flink pipeline with {self.window_minutes}-minute windows")
         

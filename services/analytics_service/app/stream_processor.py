@@ -14,8 +14,10 @@ from datetime import datetime
 from pyflink.datastream.functions import AggregateFunction
 from libs.flink.flink import FlinkStreamProcessor
 from config.logging import get_logger
+from config.settings import get_settings
 
 logger = get_logger(__name__)
+settings = get_settings()
 
 
 class AnalyticsAggregator(AggregateFunction):
@@ -101,19 +103,38 @@ class AnalyticsStreamProcessor(FlinkStreamProcessor):
     of submission and plagiarism check events.
     """
     
-    def __init__(self, kafka_broker: str = 'localhost:9092', window_minutes: int = 5):
+    def __init__(
+        self,
+        kafka_broker: str = 'localhost:9092',
+        window_minutes: int = 5,
+        flink_mode: str = 'local',
+        flink_host: str = 'flink-jobmanager',
+        flink_port: int = 8081,
+        flink_managed_endpoint: str = None,
+        flink_managed_api_key: str = None
+    ):
         """Initialize the analytics stream processor.
         
         Args:
             kafka_broker: Kafka broker address
             window_minutes: Window size in minutes for tumbling windows
+            flink_mode: Execution mode - \"local\", \"remote\", or \"managed\"
+            flink_host: Flink JobManager hostname (for remote mode)
+            flink_port: Flink JobManager port (for remote mode)
+            flink_managed_endpoint: Managed Flink endpoint (for managed mode)
+            flink_managed_api_key: API key for managed service
         """
         super().__init__(
             kafka_broker=kafka_broker,
             window_minutes=window_minutes,
             output_topic='analytics_window',
             group_id='analytics-service-flink-processor',
-            job_name='Analytics Windowed Aggregation'
+            job_name='Analytics Windowed Aggregation',
+            flink_mode=flink_mode,
+            flink_host=flink_host,
+            flink_port=flink_port,
+            flink_managed_endpoint=flink_managed_endpoint,
+            flink_managed_api_key=flink_managed_api_key
         )
     
     def get_aggregator(self) -> AggregateFunction:
@@ -141,17 +162,41 @@ class AnalyticsStreamProcessor(FlinkStreamProcessor):
         ]
 
 
-def create_stream_processor(kafka_broker: str = None, window_minutes: int = 5) -> AnalyticsStreamProcessor:
+def create_stream_processor(
+    kafka_broker: str = None,
+    window_minutes: int = 5,
+    flink_mode: str = None
+) -> AnalyticsStreamProcessor:
     """Factory function to create a stream processor instance.
     
+    Uses settings from config to determine Flink execution mode:
+    - local: Embedded mini-cluster (dev/testing only, NOT production-ready)
+    - remote: Self-hosted Flink cluster (Docker/K8s deployment)
+    - managed: Fully managed Flink service (AWS Kinesis, Confluent Cloud, etc.)
+    
     Args:
-        kafka_broker: Kafka broker address (defaults to 'kafka:29092')
+        kafka_broker: Kafka broker address (defaults from settings)
         window_minutes: Window size in minutes for aggregations
+        flink_mode: Override Flink execution mode from settings
         
     Returns:
         Configured AnalyticsStreamProcessor instance
     """
     if kafka_broker is None:
-        kafka_broker = os.getenv('KAFKA_BROKER', 'localhost:9092')
+        kafka_broker = settings.KAFKA_BROKER
     
-    return AnalyticsStreamProcessor(kafka_broker=kafka_broker, window_minutes=window_minutes)
+    if flink_mode is None:
+        flink_mode = settings.FLINK_MODE
+    
+    logger.info(f"Creating Flink stream processor in {flink_mode.upper()} mode")
+    
+    return AnalyticsStreamProcessor(
+        kafka_broker=kafka_broker,
+        window_minutes=window_minutes,
+        flink_mode=flink_mode,
+        flink_host=settings.FLINK_JOBMANAGER_HOST,
+        flink_port=settings.FLINK_JOBMANAGER_PORT,
+        flink_managed_endpoint=settings.FLINK_MANAGED_ENDPOINT,
+        flink_managed_api_key=settings.FLINK_MANAGED_API_KEY
+    )
+
