@@ -1,0 +1,176 @@
+#=============================================================================
+# DATA SOURCES
+#=============================================================================
+
+# Data source for GCP authentication (used by Kubernetes provider)
+data "google_client_config" "current" {}
+
+#=============================================================================
+# RANDOM RESOURCES
+#=============================================================================
+
+resource "random_id" "bucket_suffix" {
+  byte_length = 2
+}
+
+resource "random_id" "checkpoint_suffix" {
+  byte_length = 2
+}
+
+#=============================================================================
+# GCP API ENABLEMENT
+#=============================================================================
+
+locals {
+  gcp_required_services = [
+    "container.googleapis.com",      # GKE
+    "sqladmin.googleapis.com",       # Cloud SQL
+    "compute.googleapis.com",        # Compute Engine
+    "cloudfunctions.googleapis.com", # Cloud Functions
+    "run.googleapis.com",            # Cloud Run
+    "firestore.googleapis.com",      # Firestore
+    "iam.googleapis.com",            # IAM
+  ]
+}
+
+resource "google_project_service" "enabled_services" {
+  for_each = toset(local.gcp_required_services)
+
+  project            = var.gcp_project_id
+  service            = each.value
+  disable_on_destroy = false
+}
+
+#=============================================================================
+# GCP INFRASTRUCTURE
+#=============================================================================
+
+# GKE Cluster
+module "gke" {
+  source = "./modules/gcp_gke"
+
+  project_id      = var.gcp_project_id
+  region          = var.gcp_region
+  zones           = var.gcp_zones
+  cluster_name    = local.gke_cluster_name
+  network_name    = null # Using default network; create custom VPC if needed
+  subnetwork_name = null
+
+  depends_on = [google_project_service.enabled_services]
+}
+
+# Cloud SQL PostgreSQL Instance & Databases
+module "cloudsql" {
+  source = "./modules/gcp_cloudsql"
+
+  project_id          = var.gcp_project_id
+  region              = var.gcp_region
+  tier                = var.cloudsql_tier
+  engine_version      = var.cloudsql_version
+  instance_name       = local.cloudsql_name
+  users_db_name       = local.database_names.users
+  submissions_db_name = local.database_names.submissions
+
+  depends_on = [google_project_service.enabled_services]
+}
+
+# Firestore Database for Analytics
+module "firestore" {
+  source = "./modules/gcp_firestore"
+
+  project_id  = var.gcp_project_id
+  database_id = "(default)"
+
+  depends_on = [google_project_service.enabled_services]
+}
+
+# Observability Stack (Prometheus, Grafana, Loki)
+module "observability" {
+  source = "./modules/gcp_observability"
+
+  namespace = "observability"
+
+  depends_on = [module.gke]
+}
+
+# ArgoCD for GitOps
+# ArgoCD for GitOps
+module "argocd" {
+  source = "./modules/gcp_argo"
+
+  namespace     = "argocd"
+  chart_version = var.argocd_version
+
+  depends_on = [module.gke]
+}
+
+# Kubernetes Application Layer (HPAs, Ingress)
+module "k8s_apps" {
+  source = "./modules/gcp_k8s_apps"
+
+  namespace    = "default"
+  gateway_host = "${var.environment}.example.com" # Replace with actual domain
+
+  depends_on = [module.gke]
+}
+
+#=============================================================================
+# AWS INFRASTRUCTURE
+#=============================================================================
+
+# S3 Bucket for PDF Submissions
+module "submission_bucket" {
+  source = "./modules/aws_s3_submission"
+
+  region              = var.aws_region
+  name                = coalesce(var.submission_bucket_name, "${var.environment}-submission-pdfs-${random_id.bucket_suffix.hex}")
+  lambda_function_arn = module.pdf_extract_lambda.function_arn
+}
+
+# Lambda Function for PDF Text Extraction
+module "pdf_extract_lambda" {
+  source = "./modules/aws_lambda"
+
+  region            = var.aws_region
+  function_name     = local.lambda_name
+  s3_bucket         = var.lambda_deployment_bucket
+  s3_key            = var.lambda_deployment_key
+  runtime           = "python3.11"
+  handler           = "handler.lambda_handler"
+  timeout           = 60
+  memory_size       = 512
+  source_bucket_arn = module.submission_bucket.bucket_arn
+}
+
+# MSK Kafka Cluster
+module "aws_msk" {
+  source = "./modules/aws_msk"
+
+  region          = var.aws_region
+  vpc_cidr        = var.aws_vpc_cidr
+  private_subnets = var.aws_private_subnet_cidrs
+  cluster_name    = local.msk_cluster_name
+  kafka_version   = "3.5.1"
+  topics          = var.kafka_topics
+}
+
+# S3 Bucket for Flink Checkpoints
+module "aws_checkpoint_bucket" {
+  source = "./modules/aws_s3_checkpoint"
+
+  region = var.aws_region
+  name   = coalesce(var.checkpoint_bucket_name, "${var.environment}-flink-checkpoints-${random_id.checkpoint_suffix.hex}")
+}
+
+# EMR Cluster for Apache Flink Stream Processing
+module "aws_emr_flink" {
+  source = "./modules/aws_emr"
+
+  region                  = var.aws_region
+  cluster_name            = local.emr_cluster_name
+  log_uri                 = module.aws_checkpoint_bucket.bucket_arn
+  subnet_ids              = module.aws_msk.private_subnet_ids
+  flink_job_jar           = var.flink_job_jar
+  flink_job_class         = var.flink_job_class
+  kafka_bootstrap_servers = module.aws_msk.bootstrap_brokers_plaintext
+}
