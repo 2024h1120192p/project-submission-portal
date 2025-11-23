@@ -700,3 +700,6 @@ docker-compose logs -f analytics_service
 ---
 
 **Complete architecture diagram available above** ⬆️
+
+#### Footer
+The README references the assignment question file [251_CC_Assignment.txt](251_CC_Assignment.txt) to check for completion status.
