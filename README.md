@@ -272,6 +272,45 @@ Project/
 2. **Install dependencies:**
    ```bash
    pip install -r requirements.txt
+
+### Managed Flink (AWS Kinesis Data Analytics) Migration
+
+This project now uses **Amazon Managed Flink (Kinesis Data Analytics for Apache Flink)** instead of an EMR cluster for windowed stream aggregations.
+
+Key changes:
+- Terraform: EMR module replaced by `aws_managed_flink` (resource `aws_kinesisanalyticsv2_application`).
+- IAM: A dedicated execution role grants access to S3 (job artifact), CloudWatch Logs, and MSK metadata APIs.
+- Code: A new client `libs/flink/managed_client.py` provides async wrappers for application lifecycle (start/stop/status).
+- Dependencies: Added `boto3` to `requirements.txt`.
+
+Flink job packaging:
+1. Build a shaded/uber JAR for the Flink job (Scala/Java) OR PyFlink ZIP bundle.
+2. Upload it to S3, e.g. `s3://your-bucket/path/job.jar`.
+3. Set Terraform variable `flink_job_jar` to that S3 URI and apply.
+
+Terraform apply (example):
+```bash
+terraform init
+terraform plan -var="flink_job_jar=s3://your-bucket/path/job.jar" \
+               -var="aws_region=us-east-1" \
+               -var="gcp_project_id=your-project-id"
+terraform apply -auto-approve
+```
+
+Runtime operations (Python example):
+```python
+from libs.flink.managed_client import ManagedFlinkClient
+client = ManagedFlinkClient(region="us-east-1", application_name="dev-managed-flink")
+apps = await client.list_applications()
+detail = await client.describe_application()
+await client.start_application()  # start if READY
+```
+
+Advantages of Managed Flink:
+- No cluster sizing/patching overhead.
+- Auto-scaling parallelism configuration.
+- Integrated monitoring & snapshots.
+- Simplified IAM boundary versus multi-service EMR roles.
    ```
 
 ### Running Services

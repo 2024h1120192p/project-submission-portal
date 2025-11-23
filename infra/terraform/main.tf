@@ -162,15 +162,14 @@ module "aws_checkpoint_bucket" {
   name   = coalesce(var.checkpoint_bucket_name, "${var.environment}-flink-checkpoints-${random_id.checkpoint_suffix.hex}")
 }
 
-# EMR Cluster for Apache Flink Stream Processing
-module "aws_emr_flink" {
-  source = "./modules/aws_emr"
+# Managed Flink (Kinesis Data Analytics for Apache Flink) Application
+module "aws_managed_flink" {
+  source = "./modules/aws_managed_flink"
 
   region                  = var.aws_region
-  cluster_name            = local.emr_cluster_name
-  log_uri                 = module.aws_checkpoint_bucket.bucket_arn
-  subnet_ids              = module.aws_msk.private_subnet_ids
+  application_name        = local.managed_flink_app_name
   flink_job_jar           = var.flink_job_jar
-  flink_job_class         = var.flink_job_class
   kafka_bootstrap_servers = module.aws_msk.bootstrap_brokers_plaintext
+  parallelism             = 1
+  checkpointing_enabled   = true
 }

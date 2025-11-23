@@ -18,3 +18,4 @@ redis
 aiofiles
 aiokafka
 apache-flink
+boto3

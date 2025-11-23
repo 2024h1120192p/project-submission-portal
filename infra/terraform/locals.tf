@@ -32,7 +32,9 @@ locals {
   gke_cluster_name = "${var.environment}-core-gke"
   cloudsql_name    = "${var.environment}-pg"
   msk_cluster_name = "${var.environment}-msk"
-  emr_cluster_name = "${var.environment}-emr-flink"
+  # Legacy EMR name retained only in history; module removed
+  # emr_cluster_name = "${var.environment}-emr-flink"
+  managed_flink_app_name = "${var.environment}-managed-flink"
   lambda_name      = "${var.environment}-pdf-extract"
 
   # Database names
@@ -41,8 +43,8 @@ locals {
     submissions = "submissions"
   }
 
-  # Computed values
-  enable_emr_deployment = var.flink_job_jar != ""
+  # Computed values (EMR deprecated in favor of Managed Flink)
+  # EMR deployment disabled permanently after migration to Managed Flink
 
   # Kubernetes namespaces
   k8s_namespaces = {

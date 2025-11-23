@@ -17,7 +17,6 @@ lambda_deployment_bucket = "lambda-deployment-artifacts"
 lambda_deployment_key    = "lambda/pdf-extract.zip"
 
 flink_job_jar   = "" # Set to S3 path when ready, e.g., "s3://bucket/flink-jobs/stream-processor.jar"
-flink_job_class = "com.example.flink.SubmissionStreamProcessor"
 
 argocd_version = "5.51.3"
 

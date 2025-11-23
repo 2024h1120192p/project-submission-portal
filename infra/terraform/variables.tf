@@ -161,11 +161,6 @@ variable "flink_job_jar" {
   default     = ""
 }
 
-variable "flink_job_class" {
-  description = "Fully qualified main class name for Flink stream processing job"
-  type        = string
-  default     = "com.example.flink.SubmissionStreamProcessor"
-}
 
 #=============================================================================
 # KAFKA CONFIGURATION

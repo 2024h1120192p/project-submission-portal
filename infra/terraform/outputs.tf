@@ -53,9 +53,19 @@ output "msk_topics" {
   value       = module.aws_msk.topic_names
 }
 
-output "emr_cluster_id" {
-  description = "EMR cluster ID for Flink stream processing"
-  value       = module.aws_emr_flink.emr_cluster_id
+output "managed_flink_application_name" {
+  description = "Managed Flink application name"
+  value       = module.aws_managed_flink.managed_flink_application_name
+}
+
+output "managed_flink_application_arn" {
+  description = "Managed Flink application ARN"
+  value       = module.aws_managed_flink.managed_flink_application_arn
+}
+
+output "managed_flink_application_version" {
+  description = "Managed Flink application version ID"
+  value       = module.aws_managed_flink.managed_flink_application_version
 }
 
 #=============================================================================
