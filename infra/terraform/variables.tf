@@ -162,9 +162,14 @@ variable "lambda_deployment_key" {
 #=============================================================================
 
 variable "flink_job_jar" {
-  description = "S3 path to Flink job JAR file (empty to skip job deployment)"
+  description = "S3 path to Flink job JAR file (e.g., s3://bucket/path/flink-job.jar)"
   type        = string
-  default     = ""
+  # ISSUE #3: Made required (no default) with validation
+  
+  validation {
+    condition     = can(regex("^s3://", var.flink_job_jar))
+    error_message = "flink_job_jar must be an S3 path starting with 's3://'"
+  }
 }
 
 

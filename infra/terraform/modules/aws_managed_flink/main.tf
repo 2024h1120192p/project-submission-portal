@@ -2,12 +2,17 @@ variable "region" {}
 variable "application_name" {}
 variable "flink_job_jar" { # S3 path like s3://bucket/path/job.jar
   type        = string
-  default     = ""
-  description = "S3 URI to Flink job Uber/Fat JAR for Kinesis Data Analytics (empty to create app without code attachment)."
+  # ISSUE #3: No default; caller must provide JAR path
+  description = "S3 URI to Flink job Uber/Fat JAR for Kinesis Data Analytics (required)."
+  
+  validation {
+    condition     = can(regex("^s3://", var.flink_job_jar))
+    error_message = "flink_job_jar must be an S3 path starting with 's3://'"
+  }
 }
 variable "kafka_bootstrap_servers" {
   type        = string
-  default     = ""
+  # ISSUE #3: Typically passed from MSK module output, not empty
   description = "Comma-separated MSK bootstrap servers for runtime properties."
 }
 variable "parallelism" {
@@ -130,7 +135,8 @@ resource "aws_kinesisanalyticsv2_application" "flink_app" {
     }
 
     dynamic "application_code_configuration" {
-      for_each = var.flink_job_jar != "" ? [1] : []
+      # ISSUE #3: Always include code config since flink_job_jar is now required
+      for_each = [1]
       content {
         code_content_type = "ZIPFILE" # Fat JAR treated as binary; can also use PLAINTEXT for SQL
         code_content {

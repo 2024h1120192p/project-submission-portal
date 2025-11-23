@@ -1,0 +1,86 @@
+#=============================================================================
+# Terraform Variables Example
+# Copy this file to terraform.tfvars and fill in your actual values
+# DO NOT commit terraform.tfvars to git (it's in .gitignore)
+#=============================================================================
+
+#-----------------------------------------------------------------------------
+# ENVIRONMENT
+#-----------------------------------------------------------------------------
+environment = "dev"  # Options: dev, staging, prod
+
+#-----------------------------------------------------------------------------
+# GCP CONFIGURATION
+#-----------------------------------------------------------------------------
+gcp_project_id = "your-gcp-project-id"  # REQUIRED: Your GCP project ID
+gcp_region     = "us-central1"          # GCP region for resources
+gcp_zones      = ["us-central1-a", "us-central1-b", "us-central1-c"]
+
+#-----------------------------------------------------------------------------
+# AWS CONFIGURATION
+#-----------------------------------------------------------------------------
+aws_region               = "us-east-1"                              # AWS region
+aws_vpc_cidr             = "10.50.0.0/16"                          # VPC CIDR for MSK
+aws_private_subnet_cidrs = ["10.50.1.0/24", "10.50.2.0/24", "10.50.3.0/24"]
+
+#-----------------------------------------------------------------------------
+# GKE CONFIGURATION
+#-----------------------------------------------------------------------------
+gke_node_count  = 2            # Nodes per zone
+gke_machine_type = "e2-standard-4"
+
+#-----------------------------------------------------------------------------
+# CLOUD SQL CONFIGURATION
+#-----------------------------------------------------------------------------
+cloudsql_tier    = "db-f1-micro"     # Options: db-f1-micro, db-custom-1-3840, etc.
+cloudsql_version = "POSTGRES_15"     # PostgreSQL version
+
+#-----------------------------------------------------------------------------
+# S3 BUCKETS (Optional - auto-generated if not provided)
+#-----------------------------------------------------------------------------
+# submission_bucket_name = "my-project-submissions"
+# checkpoint_bucket_name = "my-project-flink-checkpoints"
+
+#-----------------------------------------------------------------------------
+# AWS LAMBDA CONFIGURATION
+#-----------------------------------------------------------------------------
+lambda_deployment_bucket = "your-lambda-deployment-bucket"  # S3 bucket containing Lambda code
+lambda_deployment_key    = "lambda/pdf-extractor.zip"       # S3 key for Lambda zip
+
+#-----------------------------------------------------------------------------
+# APACHE FLINK CONFIGURATION (ISSUE #3 - REQUIRED)
+#-----------------------------------------------------------------------------
+# CRITICAL: This is now REQUIRED. Upload your Flink job JAR to S3 first.
+# Example: aws s3 cp flink-job.jar s3://your-bucket/flink-jobs/flink-job-1.0.jar
+flink_job_jar = "s3://your-flink-artifacts-bucket/path/to/flink-job.jar"
+
+#-----------------------------------------------------------------------------
+# KAFKA TOPICS
+#-----------------------------------------------------------------------------
+kafka_topics = [
+  "submission_uploaded",
+  "plagiarism_checked",
+  "analytics_results"
+]
+
+#-----------------------------------------------------------------------------
+# ARGOCD CONFIGURATION
+#-----------------------------------------------------------------------------
+argocd_version = "5.46.0"  # Helm chart version
+
+#-----------------------------------------------------------------------------
+# GATEWAY CONFIGURATION
+#-----------------------------------------------------------------------------
+gateway_host = ""  # Leave empty for IP-based access, or set to your domain
+
+#-----------------------------------------------------------------------------
+# NOTES
+#-----------------------------------------------------------------------------
+# 1. After filling this file, rename it to: terraform.tfvars
+# 2. Never commit terraform.tfvars to version control
+# 3. For flink_job_jar: Build and upload your JAR first:
+#    - Build: mvn clean package
+#    - Upload: aws s3 cp target/flink-job.jar s3://bucket/path/
+# 4. Run: terraform init && terraform plan
+# 5. After apply, update k8s/base/configmap.yaml with output:
+#    terraform output cloudsql_instance_connection_name
