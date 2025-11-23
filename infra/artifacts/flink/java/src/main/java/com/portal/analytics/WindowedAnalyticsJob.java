@@ -4,15 +4,16 @@ import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.api.common.serialization.SimpleStringSchema;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
-import org.apache.flink.streaming.connectors.kafka.FlinkKafkaConsumer;
-import org.apache.flink.streaming.connectors.kafka.FlinkKafkaProducer;
+import org.apache.flink.connector.kafka.source.KafkaSource;
+import org.apache.flink.connector.kafka.source.enumerator.initializer.OffsetsInitializer;
+import org.apache.flink.connector.kafka.sink.KafkaRecordSerializationSchema;
+import org.apache.flink.connector.kafka.sink.KafkaSink;
 import org.apache.flink.streaming.api.windowing.time.Time;
-import org.apache.flink.streaming.api.functions.windowing.ProcessWindowFunction;
+import org.apache.flink.streaming.api.functions.windowing.ProcessAllWindowFunction;
 import org.apache.flink.streaming.api.windowing.windows.TimeWindow;
 import org.apache.flink.util.Collector;
 
 import java.time.Instant;
-import java.util.Properties;
 
 /**
  * Simplified Flink job: 
@@ -31,41 +32,61 @@ public class WindowedAnalyticsJob {
 
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
 
-        Properties props = new Properties();
-        props.setProperty("bootstrap.servers", bootstrap);
-        props.setProperty("group.id", "analytics-flink-job");
+        // Kafka Source for submissions
+        KafkaSource<String> submissionSource = KafkaSource.<String>builder()
+            .setBootstrapServers(bootstrap)
+            .setTopics(submissionTopic)
+            .setGroupId("analytics-flink-job")
+            .setStartingOffsets(OffsetsInitializer.earliest())
+            .setValueOnlyDeserializer(new SimpleStringSchema())
+            .build();
 
-        FlinkKafkaConsumer<String> submissionConsumer = new FlinkKafkaConsumer<>(submissionTopic, new SimpleStringSchema(), props);
-        FlinkKafkaConsumer<String> plagiarismConsumer = new FlinkKafkaConsumer<>(plagiarismTopic, new SimpleStringSchema(), props);
+        // Kafka Source for plagiarism
+        KafkaSource<String> plagiarismSource = KafkaSource.<String>builder()
+            .setBootstrapServers(bootstrap)
+            .setTopics(plagiarismTopic)
+            .setGroupId("analytics-flink-job")
+            .setStartingOffsets(OffsetsInitializer.earliest())
+            .setValueOnlyDeserializer(new SimpleStringSchema())
+            .build();
 
-        submissionConsumer.assignTimestampsAndWatermarks(WatermarkStrategy.noWatermarks());
-        plagiarismConsumer.assignTimestampsAndWatermarks(WatermarkStrategy.noWatermarks());
-
-        DataStream<String> submissions = env.addSource(submissionConsumer).name("SubmissionsStream");
-        DataStream<String> plagiarism = env.addSource(plagiarismConsumer).name("PlagiarismStream");
-
-        DataStream<String> merged = submissions.union(plagiarism).name("MergedEvents");
-
-        DataStream<String> windowed = merged
-            .timeWindowAll(Time.minutes(5))
-            .process(new CountWindowProcess())
-            .name("FiveMinuteCounts");
-
-        FlinkKafkaProducer<String> producer = new FlinkKafkaProducer<>(
-            outputTopic,
-            new SimpleStringSchema(),
-            props,
-            FlinkKafkaProducer.Semantic.AT_LEAST_ONCE
+        DataStream<String> submissions = env.fromSource(
+            submissionSource,
+            WatermarkStrategy.noWatermarks(),
+            "SubmissionsStream"
+        );
+        
+        DataStream<String> plagiarism = env.fromSource(
+            plagiarismSource,
+            WatermarkStrategy.noWatermarks(),
+            "PlagiarismStream"
         );
 
-        windowed.addSink(producer).name("AnalyticsWindowSink");
+        DataStream<String> merged = submissions.union(plagiarism);
+
+        DataStream<String> windowed = merged
+            .windowAll(org.apache.flink.streaming.api.windowing.assigners.TumblingProcessingTimeWindows.of(Time.minutes(5)))
+            .process(new CountWindowProcess());
+
+        // Kafka Sink
+        KafkaSink<String> sink = KafkaSink.<String>builder()
+            .setBootstrapServers(bootstrap)
+            .setRecordSerializer(
+                KafkaRecordSerializationSchema.builder()
+                    .setTopic(outputTopic)
+                    .setValueSerializationSchema(new SimpleStringSchema())
+                    .build()
+            )
+            .build();
+
+        windowed.sinkTo(sink).name("AnalyticsWindowSink");
 
         env.execute("PortalAnalyticsWindowJob");
     }
 
-    private static class CountWindowProcess extends ProcessWindowFunction<String, String, Void, TimeWindow> {
+    private static class CountWindowProcess extends ProcessAllWindowFunction<String, String, TimeWindow> {
         @Override
-        public void process(Void key, Context context, Iterable<String> elements, Collector<String> out) {
+        public void process(Context context, Iterable<String> elements, Collector<String> out) {
             long count = 0;
             for (String ignored : elements) {
                 count++;

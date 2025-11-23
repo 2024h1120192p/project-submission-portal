@@ -1,5 +1,6 @@
 *.terraform
 *.tfstate*
+*.zip
 # Terraform extras
 .terraform/
 crash.log
