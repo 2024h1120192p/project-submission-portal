@@ -1,0 +1,45 @@
+*.terraform
+*.tfstate*
+# Terraform extras
+.terraform/
+crash.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraform.lock.hcl
+*.tfplan
+
+# AWS Lambda (Python)
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+ENV/
+.aws-sam/
+.aws-sam/build/
+build/
+dist/
+*.egg-info/
+.eggs/
+.pytest_cache/
+.mypy_cache/
+.env
+.env.*
+
+# Java / JVM
+target/
+build/
+.gradle/
+*.class
+*.jar
+*.war
+*.ear
+*.nar
+.classpath
+.project
+.settings/
+*.iml
+.idea/
