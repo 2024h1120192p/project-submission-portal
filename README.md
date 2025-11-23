@@ -2,6 +2,29 @@
 
 A microservices-based plagiarism detection system for research paper submissions with event-driven architecture and stream processing.
 
+## 📋 Infrastructure Status
+
+**Last Updated:** 2025-11-23  
+**Readiness:** 70% - Core infrastructure deployed, security improvements recommended  
+**Terraform Validation:** See `TERRAFORM_ISSUES_AND_FIXES.md` for detailed status
+
+### ✅ Deployed Components
+- GKE cluster with custom VPC (cross-cloud connectivity foundation)
+- Cloud SQL PostgreSQL with Workload Identity
+- AWS MSK Kafka cluster with security group rules
+- AWS Lambda for PDF extraction
+- Managed Flink with required JAR validation
+- Observability stack (Prometheus/Grafana/Loki)
+- ArgoCD for GitOps
+
+### ⚠️ Pending Improvements
+- Lambda IAM policy (too permissive)
+- Kafka TLS verification (hard-coded for dev)
+- Cloud SQL backups & deletion protection
+- Remote state backend for team collaboration
+
+---
+
 ## Architecture
 
 This project follows a **microservices architecture** with embedded stream processing.
