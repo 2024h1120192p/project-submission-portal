@@ -77,6 +77,27 @@ variable "aws_private_subnet_cidrs" {
 }
 
 #=============================================================================
+# GKE CONFIGURATION
+#=============================================================================
+
+variable "gke_node_count" {
+  description = "Number of nodes per zone in GKE default node pool"
+  type        = number
+  default     = 2
+
+  validation {
+    condition     = var.gke_node_count > 0
+    error_message = "Node count must be at least 1."
+  }
+}
+
+variable "gke_machine_type" {
+  description = "Machine type for GKE nodes (e.g., e2-standard-4, n1-standard-2)"
+  type        = string
+  default     = "e2-standard-4"
+}
+
+#=============================================================================
 # CLOUD SQL CONFIGURATION
 #=============================================================================
 

@@ -1,32 +1,78 @@
-environment    = "dev"
-gcp_project_id = "paper-submission-portal"
+#=============================================================================
+# Terraform Variables - ACTIVE CONFIGURATION
+# DO NOT COMMIT THIS FILE TO GIT (it's in .gitignore)
+#=============================================================================
+
+#-----------------------------------------------------------------------------
+# ENVIRONMENT
+#-----------------------------------------------------------------------------
+environment = "dev"
+
+#-----------------------------------------------------------------------------
+# GCP CONFIGURATION
+#-----------------------------------------------------------------------------
+gcp_project_id = "paper-submission-portal-2024"
 gcp_region     = "us-central1"
 gcp_zones      = ["us-central1-a", "us-central1-b"]
 
+#-----------------------------------------------------------------------------
+# GKE CONFIGURATION
+#-----------------------------------------------------------------------------
+gke_node_count   = 2
+gke_machine_type = "e2-standard-4"
+
+#-----------------------------------------------------------------------------
+# AWS CONFIGURATION
+#-----------------------------------------------------------------------------
 aws_region               = "us-east-1"
 aws_vpc_cidr             = "10.50.0.0/16"
 aws_private_subnet_cidrs = ["10.50.1.0/24", "10.50.2.0/24"]
 
-cloudsql_tier    = "db-f1-micro"
+#-----------------------------------------------------------------------------
+# CLOUD SQL CONFIGURATION
+#-----------------------------------------------------------------------------
+cloudsql_tier    = "db-custom-1-3840"
 cloudsql_version = "POSTGRES_15"
 
-submission_bucket_name = "g527-submission-bucket"
-checkpoint_bucket_name = "g527-checkpoint-bucket"
+#-----------------------------------------------------------------------------
+# OPTIONAL S3 BUCKET NAMES (auto-generated if commented)
+#-----------------------------------------------------------------------------
+submission_bucket_name = "paper-portal-submissions-2024"
+checkpoint_bucket_name = "paper-portal-flink-checkpoints-2024"
 
-lambda_deployment_bucket = "lambda-deployment-artifacts"
-lambda_deployment_key    = "lambda/pdf-extract.zip"
+#-----------------------------------------------------------------------------
+# AWS LAMBDA (PDF Extraction)
+#-----------------------------------------------------------------------------
+lambda_deployment_bucket = "paper-portal-lambda-artifacts"
+lambda_deployment_key    = "lambda/submission_pdf_extract.zip"
 
-flink_job_jar = "" # Set to S3 path when ready, e.g., "s3://bucket/flink-jobs/stream-processor.jar"
+#-----------------------------------------------------------------------------
+# APACHE FLINK
+#-----------------------------------------------------------------------------
+flink_job_jar = "s3://paper-portal-flink-artifacts/flink/analytics-flink-job-1.0.0.jar"
 
+#-----------------------------------------------------------------------------
+# KAFKA TOPICS
+#-----------------------------------------------------------------------------
+kafka_topics = [
+  "paper_uploaded",
+  "paper_uploaded_processed",
+  "plagiarism_checked",
+  "plagiarism_checked_processed",
+  "analytics_window"
+]
+
+#-----------------------------------------------------------------------------
+# ARGOCD CONFIGURATION
+#-----------------------------------------------------------------------------
 argocd_version = "5.51.3"
 
-gke_context_name = ""
+#-----------------------------------------------------------------------------
+# GATEWAY INGRESS HOST
+#-----------------------------------------------------------------------------
+gateway_host = ""
 
-# Gateway Ingress Configuration
-# Option 1: Use "*" to accept any host (good for demo with IP)
-# Option 2: Set your domain (e.g., "portal.yourdomain.com") - uncomment and update
-# gateway_host = "portal.yourdomain.com"
-
+#-----------------------------------------------------------------------------
+# FEATURE FLAGS
+#-----------------------------------------------------------------------------
 enable_firewall_rules = true
-
-kafka_topics = ["submission_uploaded", "plagiarism_checked", "analytics_results"]

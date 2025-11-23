@@ -73,6 +73,8 @@ module "gke" {
   cluster_name    = local.gke_cluster_name
   network_name    = google_compute_network.gke_vpc.name
   subnetwork_name = google_compute_subnetwork.gke_subnet.name
+  node_count      = var.gke_node_count
+  machine_type    = var.gke_machine_type
 
   depends_on = [google_project_service.enabled_services]
 }

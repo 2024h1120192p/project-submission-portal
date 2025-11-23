@@ -1,86 +1,89 @@
 #=============================================================================
 # Terraform Variables Example
-# Copy this file to terraform.tfvars and fill in your actual values
-# DO NOT commit terraform.tfvars to git (it's in .gitignore)
+# Copy to terraform.tfvars and customize. KEEP SENSITIVE VALUES OUT OF GIT.
 #=============================================================================
 
 #-----------------------------------------------------------------------------
 # ENVIRONMENT
 #-----------------------------------------------------------------------------
-environment = "dev"  # Options: dev, staging, prod
+environment = "dev"  # dev | staging | prod
 
 #-----------------------------------------------------------------------------
-# GCP CONFIGURATION
+# GCP CONFIGURATION (REQUIRED)
 #-----------------------------------------------------------------------------
-gcp_project_id = "your-gcp-project-id"  # REQUIRED: Your GCP project ID
-gcp_region     = "us-central1"          # GCP region for resources
-gcp_zones      = ["us-central1-a", "us-central1-b", "us-central1-c"]
-
-#-----------------------------------------------------------------------------
-# AWS CONFIGURATION
-#-----------------------------------------------------------------------------
-aws_region               = "us-east-1"                              # AWS region
-aws_vpc_cidr             = "10.50.0.0/16"                          # VPC CIDR for MSK
-aws_private_subnet_cidrs = ["10.50.1.0/24", "10.50.2.0/24", "10.50.3.0/24"]
+gcp_project_id = "your-gcp-project-id"   # REQUIRED: GCP project ID
+gcp_region     = "us-central1"           # Region for GKE / Cloud SQL
+gcp_zones      = ["us-central1-a", "us-central1-b"]  # Multi-zone GKE
 
 #-----------------------------------------------------------------------------
 # GKE CONFIGURATION
 #-----------------------------------------------------------------------------
-gke_node_count  = 2            # Nodes per zone
-gke_machine_type = "e2-standard-4"
+gke_node_count   = 2                # Nodes per zone
+gke_machine_type = "e2-standard-4"  # Machine type (e.g., e2-standard-4, n1-standard-2)
+
+#-----------------------------------------------------------------------------
+# AWS CONFIGURATION
+#-----------------------------------------------------------------------------
+aws_region               = "us-east-1"
+aws_vpc_cidr             = "10.50.0.0/16"
+aws_private_subnet_cidrs = ["10.50.1.0/24", "10.50.2.0/24"]
 
 #-----------------------------------------------------------------------------
 # CLOUD SQL CONFIGURATION
 #-----------------------------------------------------------------------------
-cloudsql_tier    = "db-f1-micro"     # Options: db-f1-micro, db-custom-1-3840, etc.
-cloudsql_version = "POSTGRES_15"     # PostgreSQL version
+cloudsql_tier    = "db-custom-1-3840"  # See variables.tf for defaults
+cloudsql_version = "POSTGRES_15"
 
 #-----------------------------------------------------------------------------
-# S3 BUCKETS (Optional - auto-generated if not provided)
+# OPTIONAL S3 BUCKET NAMES (auto-generated if null)
 #-----------------------------------------------------------------------------
 # submission_bucket_name = "my-project-submissions"
 # checkpoint_bucket_name = "my-project-flink-checkpoints"
 
 #-----------------------------------------------------------------------------
-# AWS LAMBDA CONFIGURATION
+# AWS LAMBDA (PDF Extraction)
 #-----------------------------------------------------------------------------
-lambda_deployment_bucket = "your-lambda-deployment-bucket"  # S3 bucket containing Lambda code
-lambda_deployment_key    = "lambda/pdf-extractor.zip"       # S3 key for Lambda zip
+lambda_deployment_bucket = "your-lambda-artifacts-bucket"      # Bucket with ZIP
+lambda_deployment_key    = "lambda/submission_pdf_extract.zip" # Key to ZIP
+# pdf_function_source_dir = "../functions/pdf_extract"         # Optional: Declared in variables.tf but unused by modules
 
 #-----------------------------------------------------------------------------
-# APACHE FLINK CONFIGURATION (ISSUE #3 - REQUIRED)
+# APACHE FLINK (REQUIRED BEFORE aws_managed_flink MODULE APPLY)
 #-----------------------------------------------------------------------------
-# CRITICAL: This is now REQUIRED. Upload your Flink job JAR to S3 first.
-# Example: aws s3 cp flink-job.jar s3://your-bucket/flink-jobs/flink-job-1.0.jar
-flink_job_jar = "s3://your-flink-artifacts-bucket/path/to/flink-job.jar"
+# Upload shaded JAR first: aws s3 cp target/analytics-flink-job-1.0.0-shaded.jar s3://your-bucket/flink/analytics-flink-job-1.0.0.jar
+flink_job_jar = "s3://your-flink-artifacts-bucket/flink/analytics-flink-job-1.0.0.jar"
 
 #-----------------------------------------------------------------------------
-# KAFKA TOPICS
+# KAFKA TOPICS (Align with README event flow)
 #-----------------------------------------------------------------------------
 kafka_topics = [
-  "submission_uploaded",
+  "paper_uploaded",
+  "paper_uploaded_processed",
   "plagiarism_checked",
-  "analytics_results"
+  "plagiarism_checked_processed",
+  "analytics_window"
 ]
 
 #-----------------------------------------------------------------------------
 # ARGOCD CONFIGURATION
 #-----------------------------------------------------------------------------
-argocd_version = "5.46.0"  # Helm chart version
+argocd_version = "5.51.3"  # Keep in sync with variables.tf default
 
 #-----------------------------------------------------------------------------
-# GATEWAY CONFIGURATION
+# GATEWAY INGRESS HOST (blank = use LB/IP)
 #-----------------------------------------------------------------------------
-gateway_host = ""  # Leave empty for IP-based access, or set to your domain
+gateway_host = ""
+
+#-----------------------------------------------------------------------------
+# FEATURE FLAGS
+#-----------------------------------------------------------------------------
+enable_firewall_rules = true
 
 #-----------------------------------------------------------------------------
 # NOTES
 #-----------------------------------------------------------------------------
-# 1. After filling this file, rename it to: terraform.tfvars
-# 2. Never commit terraform.tfvars to version control
-# 3. For flink_job_jar: Build and upload your JAR first:
-#    - Build: mvn clean package
-#    - Upload: aws s3 cp target/flink-job.jar s3://bucket/path/
-# 4. Run: terraform init && terraform plan
-# 5. After apply, update k8s/base/configmap.yaml with output:
-#    terraform output cloudsql_instance_connection_name
+# 1. Rename this file to terraform.tfvars.
+# 2. Never commit terraform.tfvars.
+# 3. Sequence: apply -target=module.gke -> gcloud get-credentials -> terraform apply (rest).
+# 4. Ensure flink_job_jar & lambda_deployment_key artifacts exist in S3 before targeting related modules.
+# 5. Update k8s/base/configmap.yaml with outputs (e.g., cloudsql instance connection name) after apply.
