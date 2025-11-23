@@ -109,7 +109,7 @@ module "k8s_apps" {
   source = "./modules/gcp_k8s_apps"
 
   namespace    = "default"
-  gateway_host = "${var.environment}.example.com" # Replace with actual domain
+  gateway_host = var.gateway_host # Leave empty for IP-based access, or set domain
 
   depends_on = [module.gke]
 }

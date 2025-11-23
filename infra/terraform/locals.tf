@@ -35,7 +35,7 @@ locals {
   # Legacy EMR name retained only in history; module removed
   # emr_cluster_name = "${var.environment}-emr-flink"
   managed_flink_app_name = "${var.environment}-managed-flink"
-  lambda_name      = "${var.environment}-pdf-extract"
+  lambda_name            = "${var.environment}-pdf-extract"
 
   # Database names
   database_names = {

@@ -16,11 +16,16 @@ checkpoint_bucket_name = "g527-checkpoint-bucket"
 lambda_deployment_bucket = "lambda-deployment-artifacts"
 lambda_deployment_key    = "lambda/pdf-extract.zip"
 
-flink_job_jar   = "" # Set to S3 path when ready, e.g., "s3://bucket/flink-jobs/stream-processor.jar"
+flink_job_jar = "" # Set to S3 path when ready, e.g., "s3://bucket/flink-jobs/stream-processor.jar"
 
 argocd_version = "5.51.3"
 
 gke_context_name = ""
+
+# Gateway Ingress Configuration
+# Option 1: Use "*" to accept any host (good for demo with IP)
+# Option 2: Set your domain (e.g., "portal.yourdomain.com") - uncomment and update
+# gateway_host = "portal.yourdomain.com"
 
 enable_firewall_rules = true
 

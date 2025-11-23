@@ -129,6 +129,12 @@ variable "gke_context_name" {
   default     = ""
 }
 
+variable "gateway_host" {
+  description = "Domain name for gateway ingress (leave empty for IP-based access)"
+  type        = string
+  default     = ""
+}
+
 #=============================================================================
 # AWS LAMBDA CONFIGURATION
 #=============================================================================

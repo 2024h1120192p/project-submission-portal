@@ -23,19 +23,19 @@ variable "checkpointing_enabled" {
 
 # Derive bucket/key from flink_job_jar if provided
 locals {
-  jar_parts = var.flink_job_jar != "" ? split("/", replace(var.flink_job_jar, "s3://", "")) : []
+  jar_parts  = var.flink_job_jar != "" ? split("/", replace(var.flink_job_jar, "s3://", "")) : []
   jar_bucket = length(local.jar_parts) > 0 ? local.jar_parts[0] : null
   jar_key    = length(local.jar_parts) > 1 ? join("/", slice(local.jar_parts, 1, length(local.jar_parts))) : null
 }
 
 resource "aws_iam_role" "kda_role" {
-  name               = "${var.application_name}-kda-role"
+  name = "${var.application_name}-kda-role"
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
-      Effect = "Allow"
+      Effect    = "Allow"
       Principal = { Service = "kinesisanalytics.amazonaws.com" }
-      Action = "sts:AssumeRole"
+      Action    = "sts:AssumeRole"
     }]
   })
 }
@@ -48,8 +48,8 @@ resource "aws_iam_role_policy" "kda_inline" {
     Version = "2012-10-17"
     Statement = [
       {
-        Effect   = "Allow"
-        Action   = ["s3:GetObject", "s3:ListBucket"]
+        Effect = "Allow"
+        Action = ["s3:GetObject", "s3:ListBucket"]
         Resource = [
           local.jar_bucket != null ? "arn:aws:s3:::${local.jar_bucket}" : "*",
           local.jar_bucket != null ? "arn:aws:s3:::${local.jar_bucket}/${local.jar_key}" : "*"
@@ -92,14 +92,14 @@ resource "aws_kinesisanalyticsv2_application" "flink_app" {
 
     flink_application_configuration {
       parallelism_configuration {
-        configuration_type = "CUSTOM"
-        parallelism         = var.parallelism
+        configuration_type   = "CUSTOM"
+        parallelism          = var.parallelism
         auto_scaling_enabled = true
       }
       checkpoint_configuration {
-        configuration_type = "CUSTOM"
-        checkpointing_enabled = var.checkpointing_enabled
-        checkpoint_interval  = 60000
+        configuration_type            = "CUSTOM"
+        checkpointing_enabled         = var.checkpointing_enabled
+        checkpoint_interval           = 60000
         min_pause_between_checkpoints = 5000
       }
       monitoring_configuration {
@@ -129,5 +129,5 @@ resource "aws_kinesisanalyticsv2_application" "flink_app" {
 }
 
 output "managed_flink_application_name" { value = aws_kinesisanalyticsv2_application.flink_app.name }
-output "managed_flink_application_arn"  { value = aws_kinesisanalyticsv2_application.flink_app.arn }
+output "managed_flink_application_arn" { value = aws_kinesisanalyticsv2_application.flink_app.arn }
 output "managed_flink_application_version" { value = aws_kinesisanalyticsv2_application.flink_app.version_id }
