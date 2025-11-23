@@ -9,6 +9,8 @@ override.tf.json
 *_override.tf.json
 .terraform.lock.hcl
 *.tfplan
+terraform.tfvars
+*.tfvars.json
 
 # AWS Lambda (Python)
 __pycache__/
