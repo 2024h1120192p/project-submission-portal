@@ -45,6 +45,25 @@ resource "google_project_service" "enabled_services" {
 # GCP INFRASTRUCTURE
 #=============================================================================
 
+# Custom VPC & Subnet for cross-cloud connectivity (ISSUE #1 fix)
+# NOTE: Actual AWS↔GCP routing requires VPN / Interconnect; simple
+# VPC peering between GCP and AWS is NOT natively supported. This network
+# establishes an isolated CIDR (10.0.0.0/20) reserved for GKE to later
+# attach VPN tunnels. Security group rules on MSK allow this CIDR.
+resource "google_compute_network" "gke_vpc" {
+  name                    = "${var.environment}-gke-vpc"
+  project                 = var.gcp_project_id
+  auto_create_subnetworks = false
+}
+
+resource "google_compute_subnetwork" "gke_subnet" {
+  name          = "${var.environment}-gke-subnet"
+  project       = var.gcp_project_id
+  region        = var.gcp_region
+  network       = google_compute_network.gke_vpc.id
+  ip_cidr_range = "10.0.0.0/20"
+}
+
 # GKE Cluster
 module "gke" {
   source = "./modules/gcp_gke"
@@ -53,8 +72,8 @@ module "gke" {
   region          = var.gcp_region
   zones           = var.gcp_zones
   cluster_name    = local.gke_cluster_name
-  network_name    = null # Using default network; create custom VPC if needed
-  subnetwork_name = null
+  network_name    = google_compute_network.gke_vpc.name
+  subnetwork_name = google_compute_subnetwork.gke_subnet.name
 
   depends_on = [google_project_service.enabled_services]
 }
@@ -154,6 +173,18 @@ module "aws_msk" {
   topics          = var.kafka_topics
 }
 
+# Allow GKE subnet CIDR (10.0.0.0/20) to reach Kafka brokers (port 9092 TLS)
+# This is part of ISSUE #1 fix; assumes future VPN tunnel routes traffic.
+resource "aws_security_group_rule" "msk_from_gke" {
+  type              = "ingress"
+  security_group_id = module.aws_msk.security_group_id
+  from_port         = 9092
+  to_port           = 9092
+  protocol          = "tcp"
+  cidr_blocks       = ["10.0.0.0/20"]
+  description       = "Allow GKE (10.0.0.0/20) access to MSK brokers"
+}
+
 # S3 Bucket for Flink Checkpoints
 module "aws_checkpoint_bucket" {
   source = "./modules/aws_s3_checkpoint"
@@ -172,4 +203,6 @@ module "aws_managed_flink" {
   kafka_bootstrap_servers = module.aws_msk.bootstrap_brokers_plaintext
   parallelism             = 1
   checkpointing_enabled   = true
+  subnet_ids              = module.aws_msk.private_subnet_ids
+  security_group_ids      = [module.aws_msk.security_group_id]
 }

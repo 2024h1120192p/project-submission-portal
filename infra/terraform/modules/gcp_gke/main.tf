@@ -68,6 +68,12 @@ resource "google_container_cluster" "primary" {
 
   workload_identity_config { workload_pool = "${var.project_id}.svc.id.goog" }
 
+  # ISSUE #1: Attach to custom VPC/subnet when provided (else default).
+  # network/subnetwork are optional; if null, GCP uses the default network.
+  # Ensure caller passes existing names when customizing.
+  network    = var.network_name
+  subnetwork = var.subnetwork_name
+
   ip_allocation_policy {}
 }
 

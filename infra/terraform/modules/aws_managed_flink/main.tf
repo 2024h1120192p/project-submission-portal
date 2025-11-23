@@ -21,6 +21,18 @@ variable "checkpointing_enabled" {
   description = "Enable application checkpointing & snapshots."
 }
 
+# Networking for MSK/Kafka access
+variable "subnet_ids" {
+  type        = list(string)
+  default     = []
+  description = "Private subnet IDs for Kinesis Data Analytics application ENIs (must be in same VPC as MSK or have routing)."
+}
+variable "security_group_ids" {
+  type        = list(string)
+  default     = []
+  description = "Security group IDs applied to the application ENIs. Provide SG with egress to MSK broker ports (TLS 9092)."
+}
+
 # Derive bucket/key from flink_job_jar if provided
 locals {
   jar_parts  = var.flink_job_jar != "" ? split("/", replace(var.flink_job_jar, "s3://", "")) : []
@@ -81,6 +93,16 @@ resource "aws_kinesisanalyticsv2_application" "flink_app" {
   service_execution_role = aws_iam_role.kda_role.arn
 
   application_configuration {
+    # VPC Configuration (nested block within application_configuration)
+    # Allows Flink application to access MSK brokers in private subnets
+    dynamic "vpc_configuration" {
+      for_each = length(var.subnet_ids) > 0 && length(var.security_group_ids) > 0 ? [1] : []
+      content {
+        subnet_ids         = var.subnet_ids
+        security_group_ids = var.security_group_ids
+      }
+    }
+
     environment_properties {
       property_group {
         property_group_id = "FlinkProperties"
@@ -131,3 +153,4 @@ resource "aws_kinesisanalyticsv2_application" "flink_app" {
 output "managed_flink_application_name" { value = aws_kinesisanalyticsv2_application.flink_app.name }
 output "managed_flink_application_arn" { value = aws_kinesisanalyticsv2_application.flink_app.arn }
 output "managed_flink_application_version" { value = aws_kinesisanalyticsv2_application.flink_app.version_id }
+output "vpc_configured" { value = length(var.subnet_ids) > 0 && length(var.security_group_ids) > 0 }
