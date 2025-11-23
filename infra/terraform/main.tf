@@ -26,7 +26,6 @@ locals {
     "container.googleapis.com",      # GKE
     "sqladmin.googleapis.com",       # Cloud SQL
     "compute.googleapis.com",        # Compute Engine
-    "cloudfunctions.googleapis.com", # Cloud Functions
     "run.googleapis.com",            # Cloud Run
     "firestore.googleapis.com",      # Firestore
     "iam.googleapis.com",            # IAM
