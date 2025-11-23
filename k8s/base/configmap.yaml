@@ -7,3 +7,8 @@ data:
   # Add your application configuration here
   LOG_LEVEL: "info"
   ENVIRONMENT: "production"
+  
+  # Cloud SQL Connection (ISSUE #2 fix)
+  # Format: project:region:instance
+  # Replace with actual value from: terraform output cloudsql_instance_connection_name
+  CLOUDSQL_CONNECTION_NAME: "your-project:us-central1:your-instance"

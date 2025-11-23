@@ -18,6 +18,16 @@ output "cloudsql_instance_connection_name" {
   value       = module.cloudsql.connection_name
 }
 
+output "cloudsql_service_account_email" {
+  description = "Service account email for Cloud SQL Workload Identity"
+  value       = google_service_account.gke_cloudsql_sa.email
+}
+
+output "cloudsql_k8s_service_account" {
+  description = "Kubernetes service account name for Cloud SQL access"
+  value       = kubernetes_service_account.cloudsql_sa.metadata[0].name
+}
+
 output "firestore_database" {
   description = "Firestore database ID"
   value       = module.firestore.database_id

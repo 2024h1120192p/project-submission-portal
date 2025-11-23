@@ -93,6 +93,40 @@ module "cloudsql" {
   depends_on = [google_project_service.enabled_services]
 }
 
+# ISSUE #2: Workload Identity for Cloud SQL Access from GKE
+# Google Service Account for Cloud SQL Client access
+resource "google_service_account" "gke_cloudsql_sa" {
+  account_id   = "${var.environment}-cloudsql-client"
+  display_name = "GKE to Cloud SQL Service Account"
+  project      = var.gcp_project_id
+}
+
+# Grant Cloud SQL Client role to GSA
+resource "google_project_iam_member" "gke_cloudsql_client" {
+  project = var.gcp_project_id
+  role    = "roles/cloudsql.client"
+  member  = "serviceAccount:${google_service_account.gke_cloudsql_sa.email}"
+}
+
+# Kubernetes Service Account in default namespace
+resource "kubernetes_service_account" "cloudsql_sa" {
+  metadata {
+    name      = "cloudsql-sa"
+    namespace = "default"
+    annotations = {
+      "iam.gke.io/gcp-service-account" = google_service_account.gke_cloudsql_sa.email
+    }
+  }
+  depends_on = [module.gke]
+}
+
+# Bind Kubernetes SA to Google SA via Workload Identity
+resource "google_service_account_iam_member" "cloudsql_workload_identity" {
+  service_account_id = google_service_account.gke_cloudsql_sa.name
+  role               = "roles/iam.workloadIdentityUser"
+  member             = "serviceAccount:${var.gcp_project_id}.svc.id.goog[default/cloudsql-sa]"
+}
+
 # Firestore Database for Analytics
 module "firestore" {
   source = "./modules/gcp_firestore"
