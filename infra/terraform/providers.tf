@@ -26,7 +26,7 @@ provider "google-beta" {
 #-----------------------------------------------------------------------------
 
 # Note: For initial deployment workflow:
-# 1. First run: terraform apply -target=module.gke
+# 1. First run: terraform apply -target=module.google_gke
 # 2. Configure kubectl: gcloud container clusters get-credentials <cluster-name> --region <region>
 # 3. Then run: terraform apply (to deploy k8s resources)
 

@@ -1,17 +1,17 @@
 variable "region" {}
 variable "application_name" {}
 variable "flink_job_jar" { # S3 path like s3://bucket/path/job.jar
-  type        = string
+  type = string
   # ISSUE #3: No default; caller must provide JAR path
   description = "S3 URI to Flink job Uber/Fat JAR for Kinesis Data Analytics (required)."
-  
+
   validation {
     condition     = can(regex("^s3://", var.flink_job_jar))
     error_message = "flink_job_jar must be an S3 path starting with 's3://'"
   }
 }
 variable "kafka_bootstrap_servers" {
-  type        = string
+  type = string
   # ISSUE #3: Typically passed from MSK module output, not empty
   description = "Comma-separated MSK bootstrap servers for runtime properties."
 }
@@ -57,6 +57,12 @@ resource "aws_iam_role" "kda_role" {
   })
 }
 
+# Attach AWS managed policy for VPC access
+resource "aws_iam_role_policy_attachment" "kda_vpc_access" {
+  role       = aws_iam_role.kda_role.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
+}
+
 # Basic inline policy granting access to S3 (code + checkpoints), CloudWatch Logs, and MSK connectivity.
 resource "aws_iam_role_policy" "kda_inline" {
   name = "${var.application_name}-kda-inline"
@@ -80,6 +86,20 @@ resource "aws_iam_role_policy" "kda_inline" {
       {
         Effect   = "Allow"
         Action   = ["kafka:DescribeCluster", "kafka:GetBootstrapBrokers", "kafka:ListClusters", "kafka:DescribeClusterV2"]
+        Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "ec2:DescribeVpcs",
+          "ec2:DescribeSubnets",
+          "ec2:DescribeSecurityGroups",
+          "ec2:DescribeDhcpOptions",
+          "ec2:CreateNetworkInterface",
+          "ec2:CreateNetworkInterfacePermission",
+          "ec2:DescribeNetworkInterfaces",
+          "ec2:DeleteNetworkInterface"
+        ]
         Resource = "*"
       }
     ]
@@ -121,6 +141,7 @@ resource "aws_kinesisanalyticsv2_application" "flink_app" {
       parallelism_configuration {
         configuration_type   = "CUSTOM"
         parallelism          = var.parallelism
+        parallelism_per_kpu  = 1
         auto_scaling_enabled = true
       }
       checkpoint_configuration {

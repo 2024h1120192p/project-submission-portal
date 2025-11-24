@@ -20,6 +20,8 @@ gcp_zones      = ["us-central1-a", "us-central1-b"]  # Multi-zone GKE
 #-----------------------------------------------------------------------------
 gke_node_count   = 2                # Nodes per zone
 gke_machine_type = "e2-standard-4"  # Machine type (e.g., e2-standard-4, n1-standard-2)
+gke_disk_size_gb = 50               # Boot disk size per node (GB) (10-2000)
+gke_disk_type    = "pd-standard"     # Disk type: pd-standard | pd-ssd (pd-standard saves quota)
 
 #-----------------------------------------------------------------------------
 # AWS CONFIGURATION
@@ -45,7 +47,6 @@ cloudsql_version = "POSTGRES_15"
 #-----------------------------------------------------------------------------
 lambda_deployment_bucket = "your-lambda-artifacts-bucket"      # Bucket with ZIP
 lambda_deployment_key    = "lambda/submission_pdf_extract.zip" # Key to ZIP
-# pdf_function_source_dir = "../functions/pdf_extract"         # Optional: Declared in variables.tf but unused by modules
 
 #-----------------------------------------------------------------------------
 # APACHE FLINK (REQUIRED BEFORE aws_managed_flink MODULE APPLY)

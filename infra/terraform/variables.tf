@@ -76,6 +76,17 @@ variable "aws_private_subnet_cidrs" {
   }
 }
 
+variable "aws_private_subnet_azs" {
+  description = "List of AWS availability zones for private subnets (must match length and be distinct)"
+  type        = list(string)
+  default     = ["us-east-1a", "us-east-1b"]
+
+  validation {
+    condition     = length(var.aws_private_subnet_azs) == length(var.aws_private_subnet_cidrs) && length(distinct(var.aws_private_subnet_azs)) == length(var.aws_private_subnet_azs)
+    error_message = "aws_private_subnet_azs must match aws_private_subnet_cidrs length and all AZs must be distinct."
+  }
+}
+
 #=============================================================================
 # GKE CONFIGURATION
 #=============================================================================
@@ -95,6 +106,28 @@ variable "gke_machine_type" {
   description = "Machine type for GKE nodes (e.g., e2-standard-4, n1-standard-2)"
   type        = string
   default     = "e2-standard-4"
+}
+
+variable "gke_disk_size_gb" {
+  description = "Boot disk size (GB) for each GKE node"
+  type        = number
+  default     = 50
+
+  validation {
+    condition     = var.gke_disk_size_gb >= 10 && var.gke_disk_size_gb <= 2000
+    error_message = "gke_disk_size_gb must be between 10 and 2000 GB."
+  }
+}
+
+variable "gke_disk_type" {
+  description = "Boot disk type for GKE nodes (pd-standard | pd-ssd)"
+  type        = string
+  default     = "pd-standard"
+
+  validation {
+    condition     = contains(["pd-standard", "pd-ssd"], var.gke_disk_type)
+    error_message = "gke_disk_type must be one of: pd-standard, pd-ssd."
+  }
 }
 
 #=============================================================================
@@ -160,22 +193,22 @@ variable "gateway_host" {
 # AWS LAMBDA CONFIGURATION
 #=============================================================================
 
-variable "pdf_function_source_dir" {
-  description = "Local directory path containing PDF extraction function source code"
+variable "lambda_deployment_path" {
+  description = "Local path to Lambda deployment ZIP file (relative to terraform directory)"
   type        = string
-  default     = "../functions/pdf_extract"
+  default     = "../artifacts/lambda/submission_pdf_extract.zip"
 }
 
 variable "lambda_deployment_bucket" {
-  description = "S3 bucket containing Lambda deployment package"
+  description = "S3 bucket containing Lambda deployment package (optional, use lambda_deployment_path for local file)"
   type        = string
-  default     = "lambda-deployment-artifacts"
+  default     = null
 }
 
 variable "lambda_deployment_key" {
-  description = "S3 key (path) to Lambda deployment package ZIP file"
+  description = "S3 key (path) to Lambda deployment package ZIP file (optional, use lambda_deployment_path for local file)"
   type        = string
-  default     = "lambda/pdf-extract.zip"
+  default     = null
 }
 
 #=============================================================================
@@ -186,7 +219,7 @@ variable "flink_job_jar" {
   description = "S3 path to Flink job JAR file (e.g., s3://bucket/path/flink-job.jar)"
   type        = string
   # ISSUE #3: Made required (no default) with validation
-  
+
   validation {
     condition     = can(regex("^s3://", var.flink_job_jar))
     error_message = "flink_job_jar must be an S3 path starting with 's3://'"

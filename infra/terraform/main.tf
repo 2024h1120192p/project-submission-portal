@@ -23,12 +23,12 @@ resource "random_id" "checkpoint_suffix" {
 
 locals {
   gcp_required_services = [
-    "container.googleapis.com",      # GKE
-    "sqladmin.googleapis.com",       # Cloud SQL
-    "compute.googleapis.com",        # Compute Engine
-    "run.googleapis.com",            # Cloud Run
-    "firestore.googleapis.com",      # Firestore
-    "iam.googleapis.com",            # IAM
+    "container.googleapis.com", # GKE
+    "sqladmin.googleapis.com",  # Cloud SQL
+    "compute.googleapis.com",   # Compute Engine
+    "run.googleapis.com",       # Cloud Run
+    "firestore.googleapis.com", # Firestore
+    "iam.googleapis.com",       # IAM
   ]
 }
 
@@ -75,6 +75,8 @@ module "gke" {
   subnetwork_name = google_compute_subnetwork.gke_subnet.name
   node_count      = var.gke_node_count
   machine_type    = var.gke_machine_type
+  disk_size_gb    = var.gke_disk_size_gb
+  disk_type       = var.gke_disk_type
 
   depends_on = [google_project_service.enabled_services]
 }
@@ -187,6 +189,7 @@ module "pdf_extract_lambda" {
 
   region            = var.aws_region
   function_name     = local.lambda_name
+  filename          = var.lambda_deployment_path != null ? "${path.module}/${var.lambda_deployment_path}" : null
   s3_bucket         = var.lambda_deployment_bucket
   s3_key            = var.lambda_deployment_key
   runtime           = "python3.11"
@@ -200,12 +203,13 @@ module "pdf_extract_lambda" {
 module "aws_msk" {
   source = "./modules/aws_msk"
 
-  region          = var.aws_region
-  vpc_cidr        = var.aws_vpc_cidr
-  private_subnets = var.aws_private_subnet_cidrs
-  cluster_name    = local.msk_cluster_name
-  kafka_version   = "3.5.1"
-  topics          = var.kafka_topics
+  region             = var.aws_region
+  vpc_cidr           = var.aws_vpc_cidr
+  private_subnets    = var.aws_private_subnet_cidrs
+  private_subnet_azs = var.aws_private_subnet_azs
+  cluster_name       = local.msk_cluster_name
+  kafka_version      = "3.5.1"
+  topics             = var.kafka_topics
 }
 
 # Allow GKE subnet CIDR (10.0.0.0/20) to reach Kafka brokers (port 9092 TLS)
@@ -235,7 +239,7 @@ module "aws_managed_flink" {
   region                  = var.aws_region
   application_name        = local.managed_flink_app_name
   flink_job_jar           = var.flink_job_jar
-  kafka_bootstrap_servers = module.aws_msk.bootstrap_brokers_plaintext
+  kafka_bootstrap_servers = module.aws_msk.bootstrap_brokers
   parallelism             = 1
   checkpointing_enabled   = true
   subnet_ids              = module.aws_msk.private_subnet_ids

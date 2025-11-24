@@ -3,11 +3,17 @@ variable "function_name" {}
 variable "s3_bucket" {
   description = "S3 bucket containing Lambda deployment package"
   type        = string
+  default     = null
 }
 variable "s3_key" {
   description = "S3 key for Lambda deployment package (e.g., lambda/pdf-extract.zip)"
   type        = string
-  default     = "lambda/pdf-extract.zip"
+  default     = null
+}
+variable "filename" {
+  description = "Path to local Lambda deployment package zip file"
+  type        = string
+  default     = null
 }
 variable "runtime" {
   type    = string
@@ -81,8 +87,11 @@ resource "aws_lambda_function" "pdf_extract" {
   timeout       = var.timeout
   memory_size   = var.memory_size
 
-  s3_bucket = var.s3_bucket
-  s3_key    = var.s3_key
+  # Use either local file or S3 bucket
+  filename      = var.filename
+  s3_bucket     = var.s3_bucket
+  s3_key        = var.s3_key
+  source_code_hash = var.filename != null ? filebase64sha256(var.filename) : null
 
   environment {
     variables = {

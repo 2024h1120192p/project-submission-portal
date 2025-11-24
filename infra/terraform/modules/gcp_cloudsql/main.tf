@@ -46,7 +46,7 @@ variable "availability_type" {
 variable "ipv4_enabled" {
   description = "Whether to enable IPv4 (public IP) for the instance"
   type        = bool
-  default     = false
+  default     = true
 }
 
 #=============================================================================
@@ -54,10 +54,11 @@ variable "ipv4_enabled" {
 #=============================================================================
 
 resource "google_sql_database_instance" "pg" {
-  name             = var.instance_name
-  database_version = var.engine_version
-  region           = var.region
-  project          = var.project_id
+  name                = var.instance_name
+  database_version    = var.engine_version
+  region              = var.region
+  project             = var.project_id
+  deletion_protection = false
 
   settings {
     tier = var.tier

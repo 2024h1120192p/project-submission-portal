@@ -52,6 +52,18 @@ variable "environment" {
   default     = "dev"
 }
 
+variable "disk_size_gb" {
+  description = "Boot disk size per node (GB)"
+  type        = number
+  default     = 50
+}
+
+variable "disk_type" {
+  description = "Boot disk type for nodes (pd-standard or pd-ssd)"
+  type        = string
+  default     = "pd-standard"
+}
+
 #=============================================================================
 # GKE MODULE - RESOURCES
 #=============================================================================
@@ -62,6 +74,7 @@ resource "google_container_cluster" "primary" {
   project                  = var.project_id
   remove_default_node_pool = true
   initial_node_count       = 1
+  deletion_protection      = false
 
   networking_mode = "VPC_NATIVE"
   release_channel { channel = "REGULAR" }
@@ -83,11 +96,14 @@ resource "google_container_node_pool" "default" {
   location   = var.region
   cluster    = google_container_cluster.primary.name
   node_count = var.node_count
+  node_locations       = var.zones
 
   node_config {
-    machine_type = var.machine_type
-    oauth_scopes = ["https://www.googleapis.com/auth/cloud-platform"]
-    labels       = { environment = var.environment }
+    machine_type  = var.machine_type
+    oauth_scopes  = ["https://www.googleapis.com/auth/cloud-platform"]
+    labels        = { environment = var.environment }
+    disk_size_gb  = var.disk_size_gb
+    disk_type     = var.disk_type
   }
 }
 
