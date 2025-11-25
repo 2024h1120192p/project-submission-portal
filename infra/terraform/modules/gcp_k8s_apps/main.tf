@@ -67,7 +67,7 @@ resource "kubernetes_horizontal_pod_autoscaler_v2" "hpas" {
       name        = each.key
       api_version = "apps/v1"
     }
-    min_replicas = 2
+    min_replicas = 1
     max_replicas = 6
     metric {
       type = "Resource"
