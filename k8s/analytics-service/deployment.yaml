@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
       - name: analytics-service
-        image: paper-submission-portal/analytics_service:latest
+        image: us-central1-docker.pkg.dev/paper-submission-portal/paper-submission-portal/analytics_service:latest
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8004

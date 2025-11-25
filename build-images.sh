@@ -6,7 +6,9 @@
 set -e
 
 # Configuration
-REGISTRY="paper-submission-portal"  # For local development
+PROJECT_ID="paper-submission-portal"
+REGION="us-central1"
+REGISTRY="${REGION}-docker.pkg.dev/${PROJECT_ID}/paper-submission-portal"
 TAG="${TAG:-latest}"
 
 # Get the project root directory
@@ -41,10 +43,16 @@ for service in "${SERVICES[@]}"; do
 done
 
 echo "========================================="
-echo "All images built successfully!"
+echo "Pushing images to Artifact Registry..."
 echo "========================================="
-echo ""
-echo "To push images to registry, run:"
+
+# Push each service
 for service in "${SERVICES[@]}"; do
-    echo "  docker push $REGISTRY/$service:$TAG"
+    echo "Pushing $service..."
+    docker push "$REGISTRY/$service:$TAG"
+    echo "✓ Pushed $REGISTRY/$service:$TAG"
 done
+
+echo "========================================="
+echo "All images built and pushed successfully!"
+echo "========================================="

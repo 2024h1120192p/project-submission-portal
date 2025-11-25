@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
       - name: plagiarism-service
-        image: paper-submission-portal/plagiarism_service:latest
+        image: us-central1-docker.pkg.dev/paper-submission-portal/paper-submission-portal/plagiarism_service:latest
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8003
