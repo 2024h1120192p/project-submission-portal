@@ -1,4 +1,6 @@
 uploads/
+infra/
+k8s/
 
 # Python
 __pycache__/
