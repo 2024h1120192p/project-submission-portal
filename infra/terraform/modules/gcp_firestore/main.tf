@@ -11,7 +11,7 @@ resource "google_firestore_database" "db" {
   
   # Prevent accidental deletion of the database
   lifecycle {
-    prevent_destroy = true
+    prevent_destroy = false
     # Ignore changes to prevent recreation attempts
     ignore_changes = [
       location_id,

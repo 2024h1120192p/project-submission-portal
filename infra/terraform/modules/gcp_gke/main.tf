@@ -105,6 +105,12 @@ resource "google_container_node_pool" "default" {
     disk_size_gb  = var.disk_size_gb
     disk_type     = var.disk_type
   }
+
+  timeouts {
+    create = "45m"
+    update = "45m"
+    delete = "45m"
+  }
 }
 
 #=============================================================================
