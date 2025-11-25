@@ -17,8 +17,8 @@ spec:
     spec:
       containers:
       - name: gateway
-        image: us-central1-docker.pkg.dev/paper-submission-portal/paper-submission-portal/gateway:latest
-        imagePullPolicy: IfNotPresent
+        image: h20240192/ss_g527.paper-submission-portal:gateway-latest
+        imagePullPolicy: Always
         ports:
         - containerPort: 8000
         env:

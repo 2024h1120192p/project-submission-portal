@@ -17,8 +17,8 @@ spec:
     spec:
       containers:
       - name: notification-service
-        image: us-central1-docker.pkg.dev/paper-submission-portal/paper-submission-portal/notification_service:latest
-        imagePullPolicy: IfNotPresent
+        image: h20240192/ss_g527.paper-submission-portal:notification_service-latest
+        imagePullPolicy: Always
         ports:
         - containerPort: 8005
         env:

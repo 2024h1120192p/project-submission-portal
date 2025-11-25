@@ -19,8 +19,8 @@ spec:
       serviceAccountName: cloudsql-sa
       containers:
       - name: users-service
-        image: us-central1-docker.pkg.dev/paper-submission-portal/paper-submission-portal/users_service:latest
-        imagePullPolicy: IfNotPresent
+        image: h20240192/ss_g527.paper-submission-portal:users_service-latest
+        imagePullPolicy: Always
         ports:
         - containerPort: 8001
         env:

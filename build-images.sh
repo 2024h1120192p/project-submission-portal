@@ -6,9 +6,7 @@
 set -e
 
 # Configuration
-PROJECT_ID="paper-submission-portal"
-REGION="us-central1"
-REGISTRY="${REGION}-docker.pkg.dev/${PROJECT_ID}/paper-submission-portal"
+DOCKER_REGISTRY="h20240192/ss_g527.paper-submission-portal"
 TAG="${TAG:-latest}"
 
 # Get the project root directory
@@ -35,22 +33,22 @@ for service in "${SERVICES[@]}"; do
     # Build from project root with context of entire repo
     docker build \
         -f "./services/$service/Dockerfile" \
-        -t "$REGISTRY/$service:$TAG" \
+        -t "$DOCKER_REGISTRY:${service}-$TAG" \
         .
     
-    echo "✓ Built $REGISTRY/$service:$TAG"
+    echo "✓ Built $DOCKER_REGISTRY:${service}-$TAG"
     echo ""
 done
 
 echo "========================================="
-echo "Pushing images to Artifact Registry..."
+echo "Pushing images to Docker Hub..."
 echo "========================================="
 
 # Push each service
 for service in "${SERVICES[@]}"; do
     echo "Pushing $service..."
-    docker push "$REGISTRY/$service:$TAG"
-    echo "✓ Pushed $REGISTRY/$service:$TAG"
+    docker push "$DOCKER_REGISTRY:${service}-$TAG"
+    echo "✓ Pushed $DOCKER_REGISTRY:${service}-$TAG"
 done
 
 echo "========================================="
