@@ -16,21 +16,21 @@ spec:
         app: notification-service
     spec:
       containers:
-      - name: notification-service
-        image: h20240192/ss_g527.paper-submission-portal:notification_service-latest
-        imagePullPolicy: Always
-        ports:
-        - containerPort: 8005
-        env:
-        - name: LOG_LEVEL
-          valueFrom:
-            configMapKeyRef:
-              name: app-config
-              key: LOG_LEVEL
-        resources:
-          requests:
-            memory: "128Mi"
-            cpu: "100m"
-          limits:
-            memory: "256Mi"
-            cpu: "200m"
+        - name: notification-service
+          image: h20240192/ss_g527.paper-submission-portal@sha256:b05b8519245626e47cfe172bbe8878c115c64b4065e33739ccf7d1bcdb88a485
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8005
+          env:
+            - name: LOG_LEVEL
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: LOG_LEVEL
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "200m"

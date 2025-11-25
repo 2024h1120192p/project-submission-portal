@@ -16,21 +16,21 @@ spec:
         app: plagiarism-service
     spec:
       containers:
-      - name: plagiarism-service
-        image: h20240192/ss_g527.paper-submission-portal:plagiarism_service-latest
-        imagePullPolicy: Always
-        ports:
-        - containerPort: 8003
-        env:
-        - name: LOG_LEVEL
-          valueFrom:
-            configMapKeyRef:
-              name: app-config
-              key: LOG_LEVEL
-        resources:
-          requests:
-            memory: "256Mi"
-            cpu: "200m"
-          limits:
-            memory: "512Mi"
-            cpu: "400m"
+        - name: plagiarism-service
+          image: h20240192/ss_g527.paper-submission-portal@sha256:1d219fcb2a6464d43ee546b1e02175d156ff5485818990d1c3e1ce8674532fc0
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8003
+          env:
+            - name: LOG_LEVEL
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: LOG_LEVEL
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "200m"
+            limits:
+              memory: "512Mi"
+              cpu: "400m"
