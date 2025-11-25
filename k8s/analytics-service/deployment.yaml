@@ -16,21 +16,21 @@ spec:
         app: analytics-service
     spec:
       containers:
-      - name: analytics-service
-        image: h20240192/ss_g527.paper-submission-portal:analytics_service-latest
-        imagePullPolicy: Always
-        ports:
-        - containerPort: 8004
-        env:
-        - name: LOG_LEVEL
-          valueFrom:
-            configMapKeyRef:
-              name: app-config
-              key: LOG_LEVEL
-        resources:
-          requests:
-            memory: "128Mi"
-            cpu: "100m"
-          limits:
-            memory: "256Mi"
-            cpu: "200m"
+        - name: analytics-service
+          image: h20240192/ss_g527.paper-submission-portal@sha256:193982a657b7abfe639e36f5cc6ca4a333720859be325101e241e648546f4c5f
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8004
+          env:
+            - name: LOG_LEVEL
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: LOG_LEVEL
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "200m"
