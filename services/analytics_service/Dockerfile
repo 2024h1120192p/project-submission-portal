@@ -17,7 +17,7 @@ COPY libs/ ./libs/
 COPY config/ ./config/
 
 # Copy the specific service code
-COPY services/analytics_service/ ./services/analytics_service/
+COPY services/ ./services/
 
 # Set Python path to include the app root
 ENV PYTHONPATH=/app
