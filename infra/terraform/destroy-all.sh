@@ -39,11 +39,11 @@ if [ "$confirm1" != "DESTROY" ]; then
     exit 0
 fi
 
-read -p "Are you ABSOLUTELY sure? Type 'YES DELETE EVERYTHING': " confirm2
-if [ "$confirm2" != "YES DELETE EVERYTHING" ]; then
-    echo "Cancelled."
-    exit 0
-fi
+# read -p "Are you ABSOLUTELY sure? Type 'YES DELETE EVERYTHING': " confirm2
+# if [ "$confirm2" != "YES DELETE EVERYTHING" ]; then
+#     echo "Cancelled."
+#     exit 0
+# fi
 
 echo ""
 echo -e "${YELLOW}Starting destruction process...${NC}"
