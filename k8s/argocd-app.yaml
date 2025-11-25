@@ -13,7 +13,7 @@ spec:
   
   destination:
     server: https://kubernetes.default.svc
-    namespace: submission-portal
+    namespace: paper-submission-portal
   
   syncPolicy:
     automated:
