@@ -10,6 +10,8 @@ spec:
     repoURL: https://github.com/2024h1120192p/project-submission-portal.git
     targetRevision: main
     path: k8s
+    directory:
+      recurse: true
   
   destination:
     server: https://kubernetes.default.svc
