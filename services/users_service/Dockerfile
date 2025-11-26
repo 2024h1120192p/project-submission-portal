@@ -20,7 +20,7 @@ COPY config/ ./config/
 COPY services/ ./services/
 
 # Copy .env file if it exists (from GitHub Actions CI/CD)
-# Using .env* pattern to handle both cases: .env exists or doesn't exist
+# Using .en[v] pattern to handle both cases: .env exists or doesn't exist
 COPY .en[v] /app/
 
 # Set Python path to include the app root
