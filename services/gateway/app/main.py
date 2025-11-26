@@ -77,6 +77,13 @@ uploads_dir.mkdir(exist_ok=True)
 app.mount("/uploads", StaticFiles(directory=settings.UPLOAD_DIR), name="uploads")
 
 
+# Health check endpoint for load balancer
+@app.get("/health")
+async def health_check():
+    """Health check endpoint for Kubernetes probes and load balancer."""
+    return {"status": "healthy", "service": "gateway"}
+
+
 # Register routers
 app.include_router(public_router, tags=["public"])
 app.include_router(dashboard_router, tags=["dashboard"])
