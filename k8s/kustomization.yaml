@@ -32,3 +32,4 @@ images:
   - name: h20240192/ss_g527.paper-submission-portal
     newName: h20240192/ss_g527.paper-submission-portal
     digest: sha256:b6e8972b2dec192264481343d91034cc8f023bcb39f460aa28108e5d8af31056
+argo_update: "2025-11-26T16:41:01Z"
