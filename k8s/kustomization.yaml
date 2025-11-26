@@ -17,7 +17,15 @@ resources:
   - plagiarism-service/service.yaml
   - submission-service/deployment.yaml
   - submission-service/service.yaml
-  - observability/
+  - observability/namespace.yaml
+  - observability/rbac.yaml
+  - observability/prometheus-configmap.yaml
+  - observability/prometheus-rules.yaml
+  - observability/loki-config.yaml
+  - observability/grafana-datasources.yaml
+  - observability/grafana-dashboards.yaml
+  - observability/alertmanager-config.yaml
+  - observability/servicemonitor.yaml
 # GitHub workflows will update this images section with new digests
 images:
   - name: h20240192/ss_g527.paper-submission-portal
