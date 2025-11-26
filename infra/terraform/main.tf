@@ -212,18 +212,6 @@ module "aws_msk" {
   topics             = var.kafka_topics
 }
 
-# Allow GKE subnet CIDR (10.0.0.0/20) to reach Kafka brokers (port 9092 TLS)
-# This is part of ISSUE #1 fix; assumes future VPN tunnel routes traffic.
-resource "aws_security_group_rule" "msk_from_gke" {
-  type              = "ingress"
-  security_group_id = module.aws_msk.security_group_id
-  from_port         = 9092
-  to_port           = 9092
-  protocol          = "tcp"
-  cidr_blocks       = ["10.0.0.0/20"]
-  description       = "Allow GKE (10.0.0.0/20) access to MSK brokers"
-}
-
 # S3 Bucket for Flink Checkpoints
 module "aws_checkpoint_bucket" {
   source = "./modules/aws_s3_checkpoint"

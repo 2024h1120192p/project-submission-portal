@@ -95,17 +95,34 @@ resource "aws_security_group" "msk" {
   name        = "${var.cluster_name}-sg"
   description = "MSK security group"
   vpc_id      = aws_vpc.this.id
+
+  # Allow all traffic within the VPC (MSK to MSK, and local services)
   ingress {
+    description = "Allow all traffic from VPC"
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
     cidr_blocks = [var.vpc_cidr]
   }
+
+  # Allow Kafka broker TLS port from GKE (10.0.0.0/20)
+  ingress {
+    description = "Allow GKE (10.0.0.0/20) access to MSK brokers"
+    from_port   = 9092
+    to_port     = 9092
+    protocol    = "tcp"
+    cidr_blocks = ["10.0.0.0/20"]
+  }
+
   egress {
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name = "${var.cluster_name}-sg"
   }
 }
 
