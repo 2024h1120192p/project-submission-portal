@@ -1,0 +1,123 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: observability-ingress
+  namespace: observability
+  annotations:
+    kubernetes.io/ingress.class: "gce"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    ingress.gcp.kubernetes.io/pre-shared-certificate: "gke-ingress-cert"
+spec:
+  rules:
+    - host: grafana.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: grafana
+                port:
+                  number: 80
+    - host: prometheus.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: kube-prometheus-stack-prometheus
+                port:
+                  number: 9090
+    - host: alertmanager.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: kube-prometheus-stack-alertmanager
+                port:
+                  number: 9093
+    - host: loki.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: loki-stack
+                port:
+                  number: 3100
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: grafana-lb
+  namespace: observability
+  labels:
+    app: grafana
+spec:
+  type: LoadBalancer
+  selector:
+    app.kubernetes.io/name: grafana
+  ports:
+    - port: 80
+      targetPort: 3000
+      protocol: TCP
+      name: http
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus-lb
+  namespace: observability
+  labels:
+    app: prometheus
+spec:
+  type: LoadBalancer
+  selector:
+    prometheus: kube-prometheus-stack-prometheus
+  ports:
+    - port: 9090
+      targetPort: 9090
+      protocol: TCP
+      name: web
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: alertmanager-lb
+  namespace: observability
+  labels:
+    app: alertmanager
+spec:
+  type: LoadBalancer
+  selector:
+    alertmanager: kube-prometheus-stack-alertmanager
+  ports:
+    - port: 9093
+      targetPort: 9093
+      protocol: TCP
+      name: web
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: loki-lb
+  namespace: observability
+  labels:
+    app: loki
+spec:
+  type: LoadBalancer
+  selector:
+    app: loki-stack
+  ports:
+    - port: 3100
+      targetPort: 3100
+      protocol: TCP
+      name: http

@@ -1,0 +1,160 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: application-alerts
+  namespace: observability
+  labels:
+    release: kube-prometheus-stack
+spec:
+  groups:
+    - name: application.rules
+      interval: 30s
+      rules:
+        # Gateway Service Alerts
+        - alert: GatewayHighErrorRate
+          expr: |
+            rate(http_requests_total{job="gateway-service", status=~"5.."}[5m]) > 0.05
+          for: 5m
+          labels:
+            severity: critical
+            service: gateway
+          annotations:
+            summary: "High error rate in gateway service"
+            description: "Gateway service error rate is {{ $value | humanizePercentage }}"
+
+        - alert: GatewayHighLatency
+          expr: |
+            histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{job="gateway-service"}[5m])) > 1
+          for: 5m
+          labels:
+            severity: warning
+            service: gateway
+          annotations:
+            summary: "High latency in gateway service"
+            description: "Gateway p95 latency is {{ $value }}s"
+
+        # Submission Service Alerts
+        - alert: SubmissionServiceHighErrorRate
+          expr: |
+            rate(http_requests_total{job="submission-service", status=~"5.."}[5m]) > 0.05
+          for: 5m
+          labels:
+            severity: critical
+            service: submission
+          annotations:
+            summary: "High error rate in submission service"
+            description: "Submission service error rate is {{ $value | humanizePercentage }}"
+
+        - alert: SubmissionServiceDown
+          expr: |
+            up{job="submission-service"} == 0
+          for: 2m
+          labels:
+            severity: critical
+            service: submission
+          annotations:
+            summary: "Submission service is down"
+            description: "Submission service has been unavailable for more than 2 minutes"
+
+        # Analytics Service Alerts
+        - alert: AnalyticsServiceHighMemoryUsage
+          expr: |
+            container_memory_usage_bytes{pod=~"analytics-service-.*"} / container_spec_memory_limit_bytes{pod=~"analytics-service-.*"} > 0.9
+          for: 5m
+          labels:
+            severity: warning
+            service: analytics
+          annotations:
+            summary: "High memory usage in analytics service"
+            description: "Analytics service memory usage is {{ $value | humanizePercentage }}"
+
+        # General Kubernetes Alerts
+        - alert: HighPodCrashLooping
+          expr: |
+            rate(kube_pod_container_status_restarts_total[1h]) > 5
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Pod {{ $labels.pod }} is crash looping"
+            description: "Pod {{ $labels.pod }} in namespace {{ $labels.namespace }} has restarted {{ $value }} times in the last hour"
+
+        - alert: KubernetesMemoryPressure
+          expr: |
+            kube_node_status_condition{condition="MemoryPressure", status="true"} == 1
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Kubernetes memory pressure detected on node {{ $labels.node }}"
+            description: "Node {{ $labels.node }} has MemoryPressure condition"
+
+        - alert: KubernetesDiskPressure
+          expr: |
+            kube_node_status_condition{condition="DiskPressure", status="true"} == 1
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Kubernetes disk pressure detected on node {{ $labels.node }}"
+            description: "Node {{ $labels.node }} has DiskPressure condition"
+
+        - alert: PersistentVolumeFillingUp
+          expr: |
+            (kubelet_volume_stats_used_bytes / kubelet_volume_stats_capacity_bytes) > 0.85
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "PersistentVolume is filling up"
+            description: "PersistentVolume {{ $labels.persistentvolumeclaim }} in namespace {{ $labels.namespace }} is {{ $value | humanizePercentage }} full"
+
+    - name: loki.rules
+      interval: 30s
+      rules:
+        - alert: LokiRequestErrors
+          expr: |
+            sum(rate(loki_request_duration_seconds_bucket{status=~"5.."}[5m])) by (job) > 0.1
+          for: 10m
+          labels:
+            severity: warning
+            component: loki
+          annotations:
+            summary: "Loki request errors detected"
+            description: "Loki {{ $labels.job }} has high error rate"
+
+        - alert: LokiProcessTooManyRestarts
+          expr: |
+            changes(process_start_time_seconds{job=~"loki.*"}[15m]) > 2
+          for: 5m
+          labels:
+            severity: warning
+            component: loki
+          annotations:
+            summary: "Loki process restarting too often"
+            description: "Loki has restarted more than twice in 15 minutes"
+
+    - name: prometheus.rules
+      interval: 30s
+      rules:
+        - alert: PrometheusConfigReloadFailure
+          expr: |
+            prometheus_config_last_reload_successful == 0
+          for: 10m
+          labels:
+            severity: warning
+            component: prometheus
+          annotations:
+            summary: "Prometheus config reload failed"
+            description: "Prometheus configuration reload has failed"
+
+        - alert: PrometheusHighMemoryUsage
+          expr: |
+            container_memory_usage_bytes{pod=~"prometheus-kube-prometheus-stack.*"} / container_spec_memory_limit_bytes{pod=~"prometheus-kube-prometheus-stack.*"} > 0.9
+          for: 5m
+          labels:
+            severity: warning
+            component: prometheus
+          annotations:
+            summary: "Prometheus high memory usage"
+            description: "Prometheus memory usage is {{ $value | humanizePercentage }}"
