@@ -1,0 +1,28 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: paper-submission-portal
+
+resources:
+  - base/namespace.yaml
+  - base/serviceaccount.yaml
+  - users-service/deployment.yaml
+  - users-service/service.yaml
+  - gateway/deployment.yaml
+  - gateway/service.yaml
+  - gateway/ingress.yaml
+  - analytics-service/deployment.yaml
+  - analytics-service/service.yaml
+  - notification-service/deployment.yaml
+  - notification-service/service.yaml
+  - plagiarism-service/deployment.yaml
+  - plagiarism-service/service.yaml
+  - submission-service/deployment.yaml
+  - submission-service/service.yaml
+  - observability/
+
+# GitHub workflows will update this images section with new digests
+images:
+  - name: h20240192/ss_g527.paper-submission-portal
+    newName: h20240192/ss_g527.paper-submission-portal
+    digest: sha256:b6e8972b2dec192264481343d91034cc8f023bcb39f460aa28108e5d8af31056

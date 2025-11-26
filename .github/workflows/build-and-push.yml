@@ -157,39 +157,30 @@ jobs:
           sudo chmod +x /usr/local/bin/yq
           yq --version
       
-      - name: Update image digests in ArgoCD manifests
+      - name: Update image digests in kustomization.yaml
         env:
           DOCKER_REGISTRY: ${{ env.DOCKER_REGISTRY }}
         run: |
           set -euo pipefail
-          services=(users_service gateway analytics_service notification_service plagiarism_service submission_service)
           
-          # Read digests from artifacts
-          declare -A digests
-          for svc in "${services[@]}"; do
-            digest_file="digests/${svc}.txt"
-            if [[ -f "${digest_file}" ]]; then
-              digest=$(cut -d'=' -f2 < "${digest_file}")
-              digests["${svc}"]="${digest}"
-              echo "Found digest for ${svc}: ${digest}"
-            else
-              echo "ERROR: Missing digest for ${svc}"
-              exit 1
-            fi
-          done
+          # Read the latest digest from any service (they all use the same image)
+          digest_file="digests/users_service.txt"
+          if [[ -f "${digest_file}" ]]; then
+            digest=$(cut -d'=' -f2 < "${digest_file}")
+            echo "Found digest: ${digest}"
+          else
+            echo "ERROR: Missing digest file"
+            exit 1
+          fi
           
-          # Update manifests with digests in k8s/.argocd folder
-          for svc in "${services[@]}"; do
-            dir="${svc//_/-}"
-            file="k8s/.argocd/${dir}-deployment.txt"
-            img="${DOCKER_REGISTRY}@${digests[${svc}]}"
-            echo "Updating ${file} -> ${img}"
-            NAME="${dir}" IMAGE="${img}" yq -i '(.spec.template.spec.containers[] | select(.name == env(NAME)).image) = env(IMAGE)' "${file}"
-          done
+          # Update kustomization.yaml with the new digest
+          img="${DOCKER_REGISTRY}"
+          echo "Updating k8s/kustomization.yaml -> ${img}@${digest}"
+          yq -i "(.images[] | select(.name == \"${img}\")).digest = \"${digest}\"" k8s/kustomization.yaml
           
           echo "Changed files:"; git status --porcelain
       
-      - name: Commit and push manifest changes
+      - name: Commit and push kustomization changes
         env:
           GIT_AUTHOR_NAME: github-actions[bot]
           GIT_AUTHOR_EMAIL: 41898282+github-actions[bot]@users.noreply.github.com
@@ -197,10 +188,10 @@ jobs:
           GIT_COMMITTER_EMAIL: 41898282+github-actions[bot]@users.noreply.github.com
         run: |
           set -e
-          if [[ -n "$(git status --porcelain k8s/.argocd)" ]]; then
-            git add k8s/.argocd
-            git commit -m "CI: bump ArgoCD image digests to latest"
+          if [[ -n "$(git status --porcelain k8s/kustomization.yaml)" ]]; then
+            git add k8s/kustomization.yaml
+            git commit -m "CI: bump image digest to latest"
             git push
           else
-            echo "No manifest changes to commit."
+            echo "No kustomization changes to commit."
           fi
