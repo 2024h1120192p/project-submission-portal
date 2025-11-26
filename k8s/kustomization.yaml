@@ -25,6 +25,10 @@ resources:
   - plagiarism-service/service.yaml
   - submission-service/deployment.yaml
   - submission-service/service.yaml
+
+configurations:
+  - kustomizeconfig.yaml
+
 # GitHub workflows will update this images section with new digests
 images:
   - name: h20240192/ss_g527.paper-submission-portal
