@@ -20,6 +20,9 @@ class Settings(BaseSettings):
     KAFKA_TOPIC_SUBMISSION_UPLOADED: str = "paper_uploaded"
     KAFKA_TOPIC_PLAGIARISM_CHECKED: str = "plagiarism_checked"
     
+    # OpenAI Configuration
+    OPENAI_API_KEY: str = "sk-..."
+
     # Security
     SECRET_KEY: str = "dev-secret-key-change-in-production"
     
