@@ -21,22 +21,6 @@ spec:
           imagePullPolicy: Always
           ports:
             - containerPort: 8000
-          env:
-            - name: LOG_LEVEL
-              valueFrom:
-                configMapKeyRef:
-                  name: app-config
-                  key: LOG_LEVEL
-            - name: USERS_SERVICE_URL
-              value: "http://users-service:8001"
-            - name: SUBMISSION_SERVICE_URL
-              value: "http://submission-service:8002"
-            - name: PLAGIARISM_SERVICE_URL
-              value: "http://plagiarism-service:8003"
-            - name: ANALYTICS_SERVICE_URL
-              value: "http://analytics-service:8004"
-            - name: NOTIFICATION_SERVICE_URL
-              value: "http://notification-service:8005"
           resources:
             requests:
               memory: "128Mi"

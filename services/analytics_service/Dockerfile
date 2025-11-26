@@ -19,11 +19,14 @@ COPY config/ ./config/
 # Copy the specific service code
 COPY services/ ./services/
 
+# Copy .env file if it exists (from GitHub Actions CI/CD)
+COPY .env /app/ 2>/dev/null || true
+
 # Set Python path to include the app root
 ENV PYTHONPATH=/app
 
 # Expose the port
-EXPOSE 8002
+EXPOSE 8004
 
 # Run the service
-CMD ["uvicorn", "services.analytics_service.app.main:app", "--host", "0.0.0.0", "--port", "8002"]
+CMD ["uvicorn", "services.analytics_service.app.main:app", "--host", "0.0.0.0", "--port", "8004"]

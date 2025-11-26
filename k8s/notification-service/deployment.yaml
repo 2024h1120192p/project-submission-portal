@@ -21,12 +21,6 @@ spec:
           imagePullPolicy: Always
           ports:
             - containerPort: 8005
-          env:
-            - name: LOG_LEVEL
-              valueFrom:
-                configMapKeyRef:
-                  name: app-config
-                  key: LOG_LEVEL
           resources:
             requests:
               memory: "128Mi"

@@ -17,14 +17,15 @@ on:
 permissions:
   contents: write
 
-env:
-  DOCKER_REGISTRY: h20240192/ss_g527.paper-submission-portal
-
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
+    environment: dev
     outputs:
       digests: ${{ steps.collect-digests.outputs.digests }}
+    
+    env:
+      DOCKER_REGISTRY: ${{ vars.DOCKER_REGISTRY }}
     
     strategy:
       matrix:
@@ -40,18 +41,70 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       
+      - name: Create .env file from GitHub secrets
+        run: |
+          cat > .env << 'ENVFILE'
+          # Environment configuration for Paper Submission Portal
+          # Generated from GitHub secrets during CI/CD
+          
+          LOG_LEVEL=info
+          ENVIRONMENT=production
+          
+          # Cloud SQL
+          CLOUDSQL_CONNECTION_NAME=${{ vars.CLOUDSQL_CONNECTION_NAME }}
+          POSTGRES_HOST=127.0.0.1
+          POSTGRES_PORT=5432
+          POSTGRES_DB=paper_portal
+          POSTGRES_USER=${{ secrets.POSTGRES_USER }}
+          POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
+          
+          # Service URLs (K8s DNS)
+          USERS_SERVICE_URL=http://users-service:8001
+          SUBMISSION_SERVICE_URL=http://submission-service:8002
+          PLAGIARISM_SERVICE_URL=http://plagiarism-service:8003
+          ANALYTICS_SERVICE_URL=http://analytics-service:8004
+          NOTIFICATION_SERVICE_URL=http://notification-service:8005
+          GATEWAY_URL=http://gateway:8000
+          
+          # Kafka (MSK)
+          KAFKA_BROKER=${{ vars.KAFKA_BROKER }}
+          KAFKA_TOPIC_SUBMISSION_UPLOADED=paper_uploaded
+          KAFKA_TOPIC_PLAGIARISM_CHECKED=plagiarism_checked
+          
+          # Firestore
+          FIRESTORE_DATABASE=${{ vars.FIRESTORE_DATABASE }}
+          
+          # S3 Buckets
+          S3_SUBMISSION_BUCKET=${{ vars.S3_SUBMISSION_BUCKET }}
+          S3_CHECKPOINT_BUCKET=${{ vars.S3_CHECKPOINT_BUCKET }}
+          
+          # Flink
+          FLINK_MODE=managed
+          FLINK_MANAGED_ENDPOINT=${{ vars.FLINK_MANAGED_ENDPOINT }}
+          
+          # Application
+          SECRET_KEY=${{ secrets.SECRET_KEY }}
+          UPLOAD_DIR=/tmp/uploads
+          MAX_UPLOAD_SIZE=10485760
+          ENVFILE
+          
+          echo "✓ .env file created with configuration from GitHub secrets"
+          # Show non-sensitive values for verification
+          grep -v "PASSWORD\|SECRET_KEY" .env || true
+      
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
       
-      - name: Build Docker image
+      - name: Build Docker image with .env
         run: |
           docker build \
             -f ./services/${{ matrix.service }}/Dockerfile \
             -t ${{ env.DOCKER_REGISTRY }}:${{ matrix.service }}-${{ github.sha }} \
             -t ${{ env.DOCKER_REGISTRY }}:${{ matrix.service }}-latest \
+            --build-arg ENV_FILE=.env \
             .
       
       - name: Push Docker image and capture digest
@@ -84,6 +137,7 @@ jobs:
   update-manifests:
     name: Bump K8s manifests to new images
     runs-on: ubuntu-latest
+    environment: dev
     needs: build-and-push
     steps:
       - name: Checkout repo (full)

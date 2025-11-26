@@ -19,11 +19,14 @@ COPY config/ ./config/
 # Copy all services (needed for client imports)
 COPY services/ ./services/
 
+# Copy .env file if it exists (from GitHub Actions CI/CD)
+COPY .env /app/ 2>/dev/null || true
+
 # Set Python path to include the app root
 ENV PYTHONPATH=/app
 
 # Expose the port
-EXPOSE 8003
+EXPOSE 8005
 
 # Run the service
-CMD ["uvicorn", "services.notification_service.app.main:app", "--host", "0.0.0.0", "--port", "8003"]
+CMD ["uvicorn", "services.notification_service.app.main:app", "--host", "0.0.0.0", "--port", "8005"]

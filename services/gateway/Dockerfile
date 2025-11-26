@@ -19,6 +19,9 @@ COPY config/ ./config/
 # Copy all services (gateway needs to import clients from other services)
 COPY services/ ./services/
 
+# Copy .env file if it exists (from GitHub Actions CI/CD)
+COPY .env /app/ 2>/dev/null || true
+
 # Set Python path to include the app root
 ENV PYTHONPATH=/app
 
