@@ -102,7 +102,6 @@ jobs:
         run: |
           docker build \
             -f ./services/${{ matrix.service }}/Dockerfile \
-            -t ${{ env.DOCKER_REGISTRY }}:${{ matrix.service }}-${{ github.sha }} \
             -t ${{ env.DOCKER_REGISTRY }}:${{ matrix.service }}-latest \
             --build-arg ENV_FILE=.env \
             .
@@ -110,16 +109,13 @@ jobs:
       - name: Push Docker image and capture digest
         id: push
         run: |
-          # Push the SHA-tagged image and capture its digest
-          docker push ${{ env.DOCKER_REGISTRY }}:${{ matrix.service }}-${{ github.sha }} | tee push_output.txt
-          DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' ${{ env.DOCKER_REGISTRY }}:${{ matrix.service }}-${{ github.sha }} | cut -d'@' -f2)
-          
-          # Also push latest tag
+          # Push the latest tag image and capture its digest
           docker push ${{ env.DOCKER_REGISTRY }}:${{ matrix.service }}-latest
+          DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' ${{ env.DOCKER_REGISTRY }}:${{ matrix.service }}-latest | cut -d'@' -f2)
           
           echo "digest=${DIGEST}" >> $GITHUB_OUTPUT
           echo "service=${{ matrix.service }}" >> $GITHUB_OUTPUT
-          echo "Image pushed: ${{ env.DOCKER_REGISTRY }}:${{ matrix.service }}-${{ github.sha }}"
+          echo "Image pushed: ${{ env.DOCKER_REGISTRY }}:${{ matrix.service }}-latest"
           echo "Digest: ${DIGEST}"
       
       - name: Save digest to artifact
@@ -161,7 +157,7 @@ jobs:
           sudo chmod +x /usr/local/bin/yq
           yq --version
       
-      - name: Update image digests in k8s manifests
+      - name: Update image digests in ArgoCD manifests
         env:
           DOCKER_REGISTRY: ${{ env.DOCKER_REGISTRY }}
         run: |
@@ -182,10 +178,10 @@ jobs:
             fi
           done
           
-          # Update manifests with digests
+          # Update manifests with digests in k8s/.argocd folder
           for svc in "${services[@]}"; do
             dir="${svc//_/-}"
-            file="k8s/${dir}/deployment.yaml"
+            file="k8s/.argocd/${dir}-deployment.yaml"
             img="${DOCKER_REGISTRY}@${digests[${svc}]}"
             echo "Updating ${file} -> ${img}"
             NAME="${dir}" IMAGE="${img}" yq -i '(.spec.template.spec.containers[] | select(.name == env(NAME)).image) = env(IMAGE)' "${file}"
@@ -201,9 +197,9 @@ jobs:
           GIT_COMMITTER_EMAIL: 41898282+github-actions[bot]@users.noreply.github.com
         run: |
           set -e
-          if [[ -n "$(git status --porcelain k8s)" ]]; then
-            git add k8s
-            git commit -m "CI: bump k8s images to digest @${{ github.sha }}"
+          if [[ -n "$(git status --porcelain k8s/.argocd)" ]]; then
+            git add k8s/.argocd
+            git commit -m "CI: bump ArgoCD image digests to latest"
             git push
           else
             echo "No manifest changes to commit."

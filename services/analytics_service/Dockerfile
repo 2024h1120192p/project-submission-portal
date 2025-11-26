@@ -20,7 +20,7 @@ COPY config/ ./config/
 COPY services/ ./services/
 
 # Copy .env file if it exists (from GitHub Actions CI/CD)
-COPY .env /app/ 2>/dev/null || true
+COPY .env /app/
 
 # Set Python path to include the app root
 ENV PYTHONPATH=/app
