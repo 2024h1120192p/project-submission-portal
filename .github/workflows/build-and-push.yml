@@ -159,24 +159,34 @@ jobs:
       
       - name: Update image digests in kustomization.yaml
         env:
-          DOCKER_REGISTRY: ${{ env.DOCKER_REGISTRY }}
+          DOCKER_REGISTRY: ${{ vars.DOCKER_REGISTRY }}
         run: |
           set -euo pipefail
           
-          # Read the latest digest from any service (they all use the same image)
-          digest_file="digests/users_service.txt"
-          if [[ -f "${digest_file}" ]]; then
-            digest=$(cut -d'=' -f2 < "${digest_file}")
-            echo "Found digest: ${digest}"
-          else
-            echo "ERROR: Missing digest file"
-            exit 1
-          fi
+          # Map of services to update in kustomization.yaml
+          declare -A SERVICE_MAP=(
+            ["users_service"]="users_service-latest"
+            ["gateway"]="gateway-latest"
+            ["analytics_service"]="analytics_service-latest"
+            ["notification_service"]="notification_service-latest"
+            ["plagiarism_service"]="plagiarism_service-latest"
+            ["submission_service"]="submission_service-latest"
+          )
           
-          # Update kustomization.yaml with the new digest
-          img="${DOCKER_REGISTRY}"
-          echo "Updating k8s/kustomization.yaml -> ${img}@${digest}"
-          yq -i "(.images[] | select(.name == \"${img}\")).digest = \"${digest}\"" k8s/kustomization.yaml
+          # Update each service's digest in kustomization.yaml
+          for digest_file in digests/*.txt; do
+            if [[ -f "${digest_file}" ]]; then
+              service_name=$(basename "${digest_file}" .txt)
+              digest=$(cut -d'=' -f2 < "${digest_file}")
+              tag="${SERVICE_MAP[$service_name]}"
+              
+              echo "Updating ${service_name} (${tag}) with digest: ${digest}"
+              
+              # Update the digest for this specific service tag in kustomization.yaml
+              yq -i "(.images[] | select(.newTag == \"${tag}\")).digest = \"${digest}\"" k8s/kustomization.yaml
+              yq -i "(.images[] | select(.newTag == \"${tag}\")) |= del(.newTag)" k8s/kustomization.yaml
+            fi
+          done
           
           echo "Changed files:"; git status --porcelain
       
