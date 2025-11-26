@@ -66,6 +66,49 @@ A production-ready microservices-based plagiarism detection system for research 
 
 ---
 
+## Integration Status Checklist (Assignment Requirements)
+
+Based on the CS/SS G527 Cloud Computing assignment requirements:
+
+### ✅ Completed Requirements
+
+| Requirement | Status | Details |
+|-------------|--------|---------|
+| a. IaC (Terraform) | ✅ Complete | 12+ Terraform modules, multi-cloud provisioning |
+| b. 6 Microservices | ✅ Complete | Gateway, Users, Submission, Plagiarism, Analytics, Notification |
+| b. Serverless Function | ✅ Complete | AWS Lambda for PDF extraction |
+| b. Inter-service Communication | ✅ Complete | REST APIs + Kafka message queues |
+| c. Managed K8s (GKE) | ✅ Complete | GKE cluster `dev-core-gke` deployed |
+| c. Horizontal Pod Autoscaler | ⚠️ Partial | Need to verify HPA configuration for 2 services |
+| d. GitOps (ArgoCD) | ✅ Complete | ArgoCD tracking Git repository |
+| e. Stream Processing (Flink) | ✅ Complete | AWS Managed Flink for windowed aggregations |
+| e. Managed Kafka (MSK) | ✅ Complete | AWS MSK with 5 topics |
+| f. Object Storage | ✅ Complete | S3 for submissions, Flink checkpoints |
+| f. SQL Database | ✅ Complete | Cloud SQL PostgreSQL (users, submissions) |
+| f. NoSQL Database | ✅ Complete | Firestore/MongoDB for plagiarism results |
+| g. Prometheus/Grafana | ✅ Complete | Deployed in observability stack |
+| g. Centralized Logging | ✅ Complete | Loki for log aggregation |
+| h. Load Testing | ⚠️ Partial | Need to add k6/JMeter configuration |
+| AI Plagiarism (OpenAI) | ✅ Complete | OpenAI integration for AI content detection |
+
+### 🔄 Services Requiring Attention
+
+1. **Users Service (0/2 pods running)**
+   - CloudSQL connection issue
+   - Workload Identity verification needed
+
+2. **Submission Service (0/2 pods running)**
+   - CloudSQL connection issue
+   - Need to verify Cloud SQL Proxy sidecar
+
+### 📋 Required Actions
+
+1. Verify HPA configuration on 2 services (Gateway + Analytics recommended)
+2. Add load testing configuration (k6 scripts or JMeter plans)
+3. Fix CloudSQL connectivity for users/submission services
+
+---
+
 ## Recent Progress & Achievements
 
 ### Infrastructure Deployment (November 2025)
@@ -564,13 +607,19 @@ submission_service
     │               │
     │               └─> notification_service (consumes)
     │               └─> analytics Flink processor (consumes)
+    │               └─> plagiarism_service AI consumer (consumes) ← NEW
 
 plagiarism_service
     │
-    ├─> plagiarism_checked (raw, enriched by service)
+    ├─> [AI plagiarism consumer - aiokafka] ← NEW
+    │       • Consumes: paper_uploaded_processed
+    │       • Runs OpenAI AI detection (when enabled)
+    │       • Produces: plagiarism_checked
+    │
+    ├─> plagiarism_checked (enriched by service)
     │       • severity: high/medium/low
     │       • requires_review: boolean
-    │       • ai_generated_likely: boolean
+    │       • ai_generated_likely: boolean (OpenAI powered)
     │       │
     │       ├─> [plagiarism stream processor - aiokafka]
     │       │       • Adds processing metadata

@@ -3,6 +3,7 @@
 This module provides integration with OpenAI's API to detect
 AI-generated content in research paper submissions.
 """
+import json
 from typing import Optional
 from config.logging import get_logger
 from config.settings import get_settings
@@ -110,7 +111,6 @@ Respond ONLY with valid JSON, no additional text."""
             content = response.choices[0].message.content
             
             # Try to parse as JSON
-            import json
             try:
                 result = json.loads(content)
                 result["openai_used"] = True

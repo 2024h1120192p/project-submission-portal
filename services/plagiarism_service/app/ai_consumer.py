@@ -3,7 +3,7 @@
 Consumes paper_uploaded_processed events from Kafka and triggers
 AI plagiarism detection using OpenAI integration.
 """
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 from libs.kafka.processor import KafkaStreamProcessor
 from libs.events.schemas import Submission, PlagiarismResult
@@ -60,7 +60,7 @@ class AIPlagiarismConsumer(KafkaStreamProcessor):
                 id=event.get('id', ''),
                 user_id=event.get('user_id', ''),
                 assignment_id=event.get('assignment_id', ''),
-                uploaded_at=event.get('uploaded_at', datetime.utcnow().isoformat()),
+                uploaded_at=event.get('uploaded_at', datetime.now(timezone.utc).isoformat()),
                 file_url=event.get('file_url', ''),
                 text=event.get('text')
             )
@@ -75,7 +75,7 @@ class AIPlagiarismConsumer(KafkaStreamProcessor):
             result_event = result.model_dump(mode='json')
             result_event['source'] = 'kafka_consumer'
             result_event['consumed_from'] = 'paper_uploaded_processed'
-            result_event['processed_at'] = datetime.utcnow().isoformat()
+            result_event['processed_at'] = datetime.now(timezone.utc).isoformat()
             
             logger.info(
                 f"AI plagiarism check complete for {submission.id}: "
@@ -91,7 +91,7 @@ class AIPlagiarismConsumer(KafkaStreamProcessor):
             return {
                 'submission_id': event.get('id', 'unknown'),
                 'error': str(e),
-                'processed_at': datetime.utcnow().isoformat(),
+                'processed_at': datetime.now(timezone.utc).isoformat(),
                 'event_type': 'plagiarism_check_failed'
             }
 
