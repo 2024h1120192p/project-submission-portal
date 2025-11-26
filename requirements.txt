@@ -19,3 +19,4 @@ aiofiles
 aiokafka
 apache-flink
 boto3
+openai

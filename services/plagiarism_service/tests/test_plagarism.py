@@ -8,9 +8,10 @@ from unittest.mock import AsyncMock, patch
 @pytest.mark.asyncio
 async def test_check():
     """Test plagiarism check endpoint with async client."""
-    # Mock user service client
+    # Mock user service client, submission service client, and store
     with patch('services.plagiarism_service.app.main.user_service_client') as mock_user_client, \
-         patch('services.plagiarism_service.app.main.submission_service_client') as mock_sub_client:
+         patch('services.plagiarism_service.app.main.submission_service_client') as mock_sub_client, \
+         patch('services.plagiarism_service.app.main.store') as mock_store:
         
         # Mock user exists
         mock_user = AsyncMock()
@@ -19,6 +20,9 @@ async def test_check():
         mock_user.email = "test@example.com"
         mock_user.role = "student"
         mock_user_client.get_user = AsyncMock(return_value=mock_user)
+        
+        # Mock store.save
+        mock_store.save = AsyncMock(return_value=None)
         
         payload = {
             "id": "s1",
@@ -71,7 +75,8 @@ async def test_check_missing_text_fetched():
     from libs.events.schemas import Submission
     
     with patch('services.plagiarism_service.app.main.user_service_client') as mock_user_client, \
-         patch('services.plagiarism_service.app.main.submission_service_client') as mock_sub_client:
+         patch('services.plagiarism_service.app.main.submission_service_client') as mock_sub_client, \
+         patch('services.plagiarism_service.app.main.store') as mock_store:
         
         # Mock user exists
         mock_user = AsyncMock()
@@ -87,7 +92,10 @@ async def test_check_missing_text_fetched():
             file_url="gs://x/y.pdf",
             text="fetched text from submission service"
         )
-        mock_sub_client.get_submission = AsyncMock(return_value=full_sub)
+        mock_sub_client.get = AsyncMock(return_value=full_sub)
+        
+        # Mock store.save
+        mock_store.save = AsyncMock(return_value=None)
         
         payload = {
             "id": "s1",
@@ -102,4 +110,4 @@ async def test_check_missing_text_fetched():
             res = await client.post("/check", json=payload)
         
         assert res.status_code == 200
-        mock_sub_client.get_submission.assert_called_once_with("s1")
+        mock_sub_client.get.assert_called_once_with("s1")

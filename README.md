@@ -459,6 +459,36 @@ uvicorn services.notification_service.app.main:app --port 8005
 uvicorn services.gateway.app.main:app --port 8000
 ```
 
+### Seeding Demo Users (For Login)
+
+**Important:** Before using the login functionality, you need to seed demo users into the database. The login system requires users to exist in the User Service.
+
+1. **Ensure the User Service is running** (port 8001)
+2. **Run the seed script:**
+   ```bash
+   # Activate virtual environment first
+   source .venv/bin/activate
+   
+   # Run the seed script
+   python scripts/seed_data.py
+   ```
+
+3. **Available demo users after seeding:**
+   | Email | Role | User ID |
+   |-------|------|---------|
+   | researcher@university.edu | student | student_001 |
+   | bob.researcher@university.edu | student | student_002 |
+   | carol.researcher@university.edu | student | student_003 |
+   | reviewer@university.edu | faculty | faculty_001 |
+   | prof.editor@university.edu | faculty | faculty_002 |
+
+4. **Login Flow:**
+   - Visit http://localhost:8000
+   - Click "Login to Dashboard"
+   - Use any seeded email address (password can be any value for demo)
+   - Students are redirected to `/dashboard/researcher`
+   - Faculty are redirected to `/dashboard/reviewer`
+
 ### Running Tests
 
 ```bash
@@ -491,7 +521,30 @@ FLINK_JOBMANAGER=http://localhost:8081
 
 # Security
 SECRET_KEY=your-secret-key-here
+
+# OpenAI (for AI plagiarism detection)
+OPENAI_API_KEY=your-openai-api-key-here
+OPENAI_MODEL=gpt-4o-mini
+OPENAI_ENABLED=false  # Set to true to enable AI detection
 ```
+
+### OpenAI AI Plagiarism Detection
+
+The plagiarism service supports AI-generated content detection using OpenAI's API:
+
+1. **Enable OpenAI integration:**
+   - Set `OPENAI_API_KEY` to your OpenAI API key
+   - Set `OPENAI_ENABLED=true`
+   
+2. **How it works:**
+   - When a paper is submitted, the plagiarism service analyzes text using OpenAI
+   - The AI detection runs as part of the plagiarism pipeline
+   - Results include `ai_generated_probability` and `ai_generated_likely` flags
+   
+3. **Kafka Integration:**
+   - AI plagiarism consumer listens to `paper_uploaded_processed` topic
+   - Automatically triggers plagiarism check with AI detection
+   - Produces results to `plagiarism_checked` topic
 
 ## Event-Driven Architecture
 

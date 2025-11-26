@@ -11,11 +11,15 @@ from unittest.mock import AsyncMock, patch
 @pytest.mark.asyncio
 async def test_client_check():
     """Test PlagiarismServiceClient check method."""
-    with patch('services.plagiarism_service.app.main.user_service_client') as mock_user_client:
+    with patch('services.plagiarism_service.app.main.user_service_client') as mock_user_client, \
+         patch('services.plagiarism_service.app.main.store') as mock_store:
         # Mock user exists
         mock_user = AsyncMock()
         mock_user.id = "u1"
         mock_user_client.get_user = AsyncMock(return_value=mock_user)
+        
+        # Mock store.save
+        mock_store.save = AsyncMock(return_value=None)
         
         # Create client pointing to test app
         client = PlagiarismServiceClient("http://test")

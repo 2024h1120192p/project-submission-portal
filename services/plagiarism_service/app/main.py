@@ -6,6 +6,7 @@ from config.logging import get_logger
 from .engine import run_plagiarism_pipeline
 from .store import store
 from .stream_processor import create_stream_processor
+from .ai_consumer import create_ai_plagiarism_consumer
 from services.users_service.app.client import UserServiceClient
 from services.submission_service.app.client import SubmissionServiceClient
 from config.settings import get_settings
@@ -20,8 +21,10 @@ submission_service_client = SubmissionServiceClient(settings.SUBMISSION_SERVICE_
 kafka_broker = settings.KAFKA_BROKER
 kafka_client = KafkaProducerClient(broker=kafka_broker)
 
-# Initialize Flink stream processor
+# Initialize stream processors
 stream_processor = create_stream_processor(kafka_broker=kafka_broker)
+# AI plagiarism consumer - consumes paper_uploaded_processed and triggers AI detection
+ai_consumer = create_ai_plagiarism_consumer(kafka_broker=kafka_broker)
 
 # Track Kafka availability
 kafka_available = False
@@ -39,12 +42,19 @@ async def lifespan(app: FastAPI):
         else:
             logger.warning("Kafka producer unavailable - running in fallback mode")
         
-        # Start Flink stream processor for consuming and processing events (also graceful)
+        # Start stream processor for consuming and processing events (also graceful)
         try:
             await stream_processor.start()
             logger.info("Stream processor started successfully")
         except Exception as e:
             logger.warning(f"Stream processor failed to start: {e} - continuing without it")
+        
+        # Start AI plagiarism consumer (consumes paper_uploaded_processed from Kafka)
+        try:
+            await ai_consumer.start()
+            logger.info("AI plagiarism consumer started successfully")
+        except Exception as e:
+            logger.warning(f"AI plagiarism consumer failed to start: {e} - continuing without it")
         
         logger.info("Application started successfully")
     except Exception as e:
@@ -54,6 +64,7 @@ async def lifespan(app: FastAPI):
     
     # Shutdown
     try:
+        await ai_consumer.stop()
         await stream_processor.stop()
         await kafka_client.close()
         logger.info("Application shutdown complete")

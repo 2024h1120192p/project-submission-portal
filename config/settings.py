@@ -56,6 +56,11 @@ class Settings(BaseSettings):
     UPLOAD_DIR: str = "/tmp/uploads"
     MAX_UPLOAD_SIZE: int = 10 * 1024 * 1024  # 10MB
     
+    # OpenAI Configuration for AI plagiarism detection
+    OPENAI_API_KEY: str = ""
+    OPENAI_MODEL: str = "gpt-4o-mini"  # Default model for AI detection
+    OPENAI_ENABLED: bool = False  # Disable by default, enable when API key is configured
+    
     @property
     def POSTGRES_URL(self) -> str:
         """Get PostgreSQL database URL."""
