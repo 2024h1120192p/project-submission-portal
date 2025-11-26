@@ -141,13 +141,6 @@ jobs:
         with:
           fetch-depth: 0
       
-      - name: Download all digest artifacts
-        uses: actions/download-artifact@v4
-        with:
-          pattern: digest-*
-          path: digests
-          merge-multiple: true
-      
       - name: Install yq
         run: |
           set -e
@@ -157,36 +150,21 @@ jobs:
           sudo chmod +x /usr/local/bin/yq
           yq --version
       
-      - name: Update image digests in kustomization.yaml
-        env:
-          DOCKER_REGISTRY: ${{ vars.DOCKER_REGISTRY }}
+      - name: Update timestamp in kustomization.yaml
         run: |
           set -euo pipefail
           
-          # Map of services to update in kustomization.yaml
-          declare -A SERVICE_MAP=(
-            ["users_service"]="users_service-latest"
-            ["gateway"]="gateway-latest"
-            ["analytics_service"]="analytics_service-latest"
-            ["notification_service"]="notification_service-latest"
-            ["plagiarism_service"]="plagiarism_service-latest"
-            ["submission_service"]="submission_service-latest"
-          )
+          # Generate current timestamp
+          TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
           
-          # Update each service's digest in kustomization.yaml
-          for digest_file in digests/*.txt; do
-            if [[ -f "${digest_file}" ]]; then
-              service_name=$(basename "${digest_file}" .txt)
-              digest=$(cut -d'=' -f2 < "${digest_file}")
-              tag="${SERVICE_MAP[$service_name]}"
-              
-              echo "Updating ${service_name} (${tag}) with digest: ${digest}"
-              
-              # Update the digest for this specific service tag in kustomization.yaml
-              yq -i "(.images[] | select(.newTag == \"${tag}\")).digest = \"${digest}\"" k8s/kustomization.yaml
-              yq -i "(.images[] | select(.newTag == \"${tag}\")) |= del(.newTag)" k8s/kustomization.yaml
-            fi
-          done
+          echo "Updating argo_update timestamp to: ${TIMESTAMP}"
+          
+          # Update or add the argo_update timestamp in kustomization.yaml
+          if yq -e '.argo_update' k8s/kustomization.yaml > /dev/null 2>&1; then
+            yq -i ".argo_update = \"${TIMESTAMP}\"" k8s/kustomization.yaml
+          else
+            yq -i ". += {\"argo_update\": \"${TIMESTAMP}\"}" k8s/kustomization.yaml
+          fi
           
           echo "Changed files:"; git status --porcelain
       
@@ -200,7 +178,7 @@ jobs:
           set -e
           if [[ -n "$(git status --porcelain k8s/kustomization.yaml)" ]]; then
             git add k8s/kustomization.yaml
-            git commit -m "CI: bump image digest to latest"
+            git commit -m "CI: update deployment timestamp"
             git push
           else
             echo "No kustomization changes to commit."
