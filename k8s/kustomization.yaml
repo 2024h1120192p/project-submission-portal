@@ -1,8 +1,6 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
-
 namespace: paper-submission-portal
-
 resources:
   - base/namespace.yaml
   - base/serviceaccount.yaml
@@ -20,7 +18,6 @@ resources:
   - submission-service/deployment.yaml
   - submission-service/service.yaml
   - observability/
-
 # GitHub workflows will update this images section with new digests
 images:
   - name: h20240192/ss_g527.paper-submission-portal
