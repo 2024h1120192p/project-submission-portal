@@ -181,7 +181,7 @@ jobs:
           # Update manifests with digests in k8s/.argocd folder
           for svc in "${services[@]}"; do
             dir="${svc//_/-}"
-            file="k8s/.argocd/${dir}-deployment.yaml"
+            file="k8s/.argocd/${dir}-deployment.txt"
             img="${DOCKER_REGISTRY}@${digests[${svc}]}"
             echo "Updating ${file} -> ${img}"
             NAME="${dir}" IMAGE="${img}" yq -i '(.spec.template.spec.containers[] | select(.name == env(NAME)).image) = env(IMAGE)' "${file}"
