@@ -10,6 +10,7 @@ on:
       - 'config/**'
       - 'requirements.txt'
       - '.github/workflows/build-and-push.yml'
+      - 'argocd-app.yaml'
 
 # Needed so the workflow can commit updated manifests back to the repo
 permissions:
