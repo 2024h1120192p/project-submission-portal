@@ -8,8 +8,7 @@ metadata:
 spec:
   ingressClassName: nginx  # Update based on your ingress controller
   rules:
-  - host: project-submission.example.com  # Update with your domain
-    http:
+  - http:
       paths:
       - path: /
         pathType: Prefix
