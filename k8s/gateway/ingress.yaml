@@ -4,16 +4,11 @@ metadata:
   name: gateway-ingress
   namespace: paper-submission-portal
   annotations:
-    nginx.ingress.kubernetes.io/rewrite-target: /
+    kubernetes.io/ingress.class: "gce"
+    kubernetes.io/ingress.allow-http: "true"
 spec:
-  ingressClassName: nginx  # Update based on your ingress controller
-  rules:
-  - http:
-      paths:
-      - path: /
-        pathType: Prefix
-        backend:
-          service:
-            name: gateway
-            port:
-              number: 80
+  defaultBackend:
+    service:
+      name: gateway
+      port:
+        number: 80
