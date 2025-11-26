@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: plagiarism-service
-          image: h20240192/ss_g527.paper-submission-portal@sha256:8d20b050e85975a43df5d33d05fe70f3dffbcd139397579d8f912ddcca7e659c
+          image: h20240192/ss_g527.paper-submission-portal@sha256:3a5fe6d7517ffd179ecc6c4905de57ff78325e32e13e401752cc12446f3035f0
           imagePullPolicy: Always
           ports:
             - containerPort: 8003

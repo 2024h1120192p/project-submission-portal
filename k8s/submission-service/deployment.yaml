@@ -19,7 +19,7 @@ spec:
       serviceAccountName: cloudsql-sa
       containers:
         - name: submission-service
-          image: h20240192/ss_g527.paper-submission-portal@sha256:2a11c4d85d76eef268550566ae318e7a754ac60b7ae14051cba58c5bbc9d45fd
+          image: h20240192/ss_g527.paper-submission-portal@sha256:2e69535e6123b958780675556e49de71e108301851b6e64ae84c71b885e7b1b3
           imagePullPolicy: Always
           ports:
             - containerPort: 8002

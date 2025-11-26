@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: gateway
-          image: h20240192/ss_g527.paper-submission-portal@sha256:92639e10f1afaebd8e722d3e79bc0950d26487ea1529240c114eeb685ede66f6
+          image: h20240192/ss_g527.paper-submission-portal@sha256:b4dafdfabe748813f5237f50530abcbec9c0ae0a8309b1063d8c6c0bd8cdd1d8
           imagePullPolicy: Always
           ports:
             - containerPort: 8000
