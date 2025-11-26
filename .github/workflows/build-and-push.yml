@@ -157,13 +157,13 @@ jobs:
           # Generate current timestamp
           TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
           
-          echo "Updating argo_update timestamp to: ${TIMESTAMP}"
+          echo "Updating commonAnnotations.argo_update to: ${TIMESTAMP}"
           
-          # Update or add the argo_update timestamp in kustomization.yaml
-          if yq -e '.argo_update' k8s/kustomization.yaml > /dev/null 2>&1; then
-            yq -i ".argo_update = \"${TIMESTAMP}\"" k8s/kustomization.yaml
+          # Ensure commonAnnotations exists and set argo_update
+          if yq -e '.commonAnnotations' k8s/kustomization.yaml > /dev/null 2>&1; then
+            yq -i ".commonAnnotations.argo_update = \"${TIMESTAMP}\"" k8s/kustomization.yaml
           else
-            yq -i ". += {\"argo_update\": \"${TIMESTAMP}\"}" k8s/kustomization.yaml
+            yq -i ".commonAnnotations = {\"argo_update\": \"${TIMESTAMP}\"}" k8s/kustomization.yaml
           fi
           
           echo "Changed files:"; git status --porcelain
