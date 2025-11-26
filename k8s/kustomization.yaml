@@ -1,9 +1,18 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
-namespace: paper-submission-portal
+
 resources:
   - base/namespace.yaml
   - base/serviceaccount.yaml
+  - observability/namespace.yaml
+  - observability/rbac.yaml
+  - observability/prometheus-configmap.yaml
+  - observability/prometheus-rules.yaml
+  - observability/loki-config.yaml
+  - observability/grafana-datasources.yaml
+  - observability/grafana-dashboards.yaml
+  - observability/alertmanager-config.yaml
+  - observability/servicemonitor.yaml
   - users-service/deployment.yaml
   - users-service/service.yaml
   - gateway/deployment.yaml
@@ -17,15 +26,7 @@ resources:
   - plagiarism-service/service.yaml
   - submission-service/deployment.yaml
   - submission-service/service.yaml
-  - observability/namespace.yaml
-  - observability/rbac.yaml
-  - observability/prometheus-configmap.yaml
-  - observability/prometheus-rules.yaml
-  - observability/loki-config.yaml
-  - observability/grafana-datasources.yaml
-  - observability/grafana-dashboards.yaml
-  - observability/alertmanager-config.yaml
-  - observability/servicemonitor.yaml
+
 # GitHub workflows will update this images section with new digests
 images:
   - name: h20240192/ss_g527.paper-submission-portal
