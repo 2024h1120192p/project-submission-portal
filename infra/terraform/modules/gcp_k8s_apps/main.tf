@@ -14,7 +14,7 @@ resource "kubernetes_ingress_v1" "gateway" {
     annotations = {
       "kubernetes.io/ingress.class"                 = "gce"
       "kubernetes.io/ingress.allow-http"            = "true"
-      "kubernetes.io/ingress.global-static-ip-name" = "" # Optional: reserve static IP
+      "kubernetes.io/ingress.global-static-ip-name" = "136.114.203.17" # Optional: reserve static IP
     }
   }
   spec {
