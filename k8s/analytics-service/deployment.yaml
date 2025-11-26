@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: analytics-service
-          image: h20240192/ss_g527.paper-submission-portal@sha256:011df266cd7d9e7f4659d1e6388d366db6b877e97f2aee3ece3f8ddf71a62374
+          image: h20240192/ss_g527.paper-submission-portal@sha256:b6e8972b2dec192264481343d91034cc8f023bcb39f460aa28108e5d8af31056
           imagePullPolicy: Always
           ports:
             - containerPort: 8004

@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: notification-service
-          image: h20240192/ss_g527.paper-submission-portal@sha256:7ea719e6f5c006307548c123315d21ce9e5ed4caae3ec27ea49359c2f04cec1d
+          image: h20240192/ss_g527.paper-submission-portal@sha256:ae04c6b76b0acc67f3bd445a5963a496ca13cf358827e3c24738b5aa4494f783
           imagePullPolicy: Always
           ports:
             - containerPort: 8005
